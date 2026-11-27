@@ -157,7 +157,7 @@ function HandoutPaper({ patientNbr, demoDate, content, language }) {
               {regional && <span className={"discharge-verified-pill " + (regional.verified ? "verified" : "unverified")}>{regional.verified ? "✓ Verified" : "⚠ Unverified"}</span>}</div>
             {regional && <><HandoutPaper patientNbr={d.patient_nbr} demoDate={d.demo_date} content={regional} language={regionalLang} />{regional.needs_native_review && <div className="discharge-review-note">Regional text needs native-speaker review before clinical use.</div>}
               <details className="discharge-back-translation"><summary>View back-translation</summary><p>{regional.back_translation}</p><small>Readability aid only — not clinically verified. {regional.note}</small></details></>}
-          </Card>
+          </Card></div>
           {d.intervention && <Card title="Matched follow-up intervention" right={<AssumptionTag />}><div className="discharge-intervention"><div><b>{d.intervention.name}</b><p>Suggested window: day {d.intervention.window_start_day}–{d.intervention.window_end_day}</p></div><strong>{d.intervention.minutes}<small>min</small></strong></div></Card>}
         </> : <>
           <Card title="Post-discharge check-in agent" right={<span className="discharge-card-context">SIMULATED CONVERSATION</span>}>
