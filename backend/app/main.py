@@ -833,6 +833,11 @@ def patch_task(task_id: int, body: S.TaskPatchIn, request: Request,
                db: Session = Depends(get_db)):
     role, actor = role_of(request), actor_of(request, role_of(request))
     task = get_or_404(db, Task, task_id)
+    if body.status == "Done" and task.due_date > DEMO_DATE:
+        raise HTTPException(
+            status_code=400,
+            detail="A future-dated follow-up task cannot be marked Done.",
+        )
     old = task.status
     if old == body.status:
         return {"task": task_dict(task), "changed": False}
@@ -969,17 +974,23 @@ def discharge(patient_id: int, db: Session = Depends(get_db),
         if best:
             intervention = best["action"]
 
-    instructions = tmpl.render_discharge_instructions(
-        patient_record(p, pr), intervention, DEMO_DATE
-    )
-
-    regional = tmpl.render_regional_instructions(
-        patient_record(p, pr), intervention, DEMO_DATE, lang
-    )
-
     tasks = list(db.scalars(
-        select(Task).where(Task.patient_id == p.id).order_by(Task.due_date)
+        select(Task).where(Task.patient_id == p.id).order_by(Task.due_date, Task.id)
     ).all())
+    # The handout and first follow-up task share one canonical date.
+    followup_date = (
+        tasks[0].due_date if tasks else
+        DEMO_DATE + timedelta(days=int(intervention["window_start_day"]))
+        if intervention else DEMO_DATE + timedelta(days=2)
+    )
+
+    instructions = tmpl.render_discharge_instructions(
+        patient_record(p, pr), intervention, DEMO_DATE, followup_date
+    )
+    regional = tmpl.render_regional_instructions(
+        patient_record(p, pr), intervention, DEMO_DATE, lang, followup_date
+    )
+
     reminders = tmpl.simulated_reminders(
         [{**task_dict(t), "patient_id": t.patient_id} for t in tasks], DEMO_DATE
     )

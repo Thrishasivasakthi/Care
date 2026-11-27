@@ -107,6 +107,7 @@ def run() -> dict:
     per_policy: dict[str, dict[str, list[float]]] = {
         p: {"reached": [], "avoided": []} for p in POLICIES
     }
+    per_day: list[dict] = []
 
     t0 = time.perf_counter()
     for day in range(DAYS):
@@ -145,10 +146,16 @@ def run() -> dict:
             "caretrace": opt.knapsack(items, BUDGET_MINUTES),
             "human": _greedy_fill([int(i) for i in human_order], items, BUDGET_MINUTES),
         }
+        day_values: dict[str, dict[str, float]] = {}
         for policy, sel in selected.items():
             reached, avoided = _metrics(items, sel)
             per_policy[policy]["reached"].append(reached)
             per_policy[policy]["avoided"].append(avoided)
+            day_values[policy] = {
+                "readmissions_reached": reached,
+                "expected_avoided_readmissions": avoided,
+            }
+        per_day.append({"day": day + 1, "policies": day_values})
 
     elapsed = time.perf_counter() - t0
 
@@ -158,6 +165,18 @@ def run() -> dict:
             "readmissions_reached": _summarize(np.array(per_policy[policy]["reached"])),
             "expected_avoided_readmissions": _summarize(np.array(per_policy[policy]["avoided"])),
         }
+
+    raw_by_day = [entry["policies"]["raw_risk"] for entry in per_day]
+    care_by_day = [entry["policies"]["caretrace"] for entry in per_day]
+    n_days = len(per_day)
+    win_days_reached = sum(
+        care_day["readmissions_reached"] >= raw_day["readmissions_reached"]
+        for care_day, raw_day in zip(care_by_day, raw_by_day)
+    )
+    win_days_avoided = sum(
+        care_day["expected_avoided_readmissions"] > raw_day["expected_avoided_readmissions"]
+        for care_day, raw_day in zip(care_by_day, raw_by_day)
+    )
 
     care = summary["caretrace"]["expected_avoided_readmissions"]["mean"]
     risk = summary["raw_risk"]["expected_avoided_readmissions"]["mean"]
@@ -180,6 +199,10 @@ def run() -> dict:
         "test_population": n,
         "elapsed_seconds": round(elapsed, 2),
         "policies": summary,
+        "per_day": per_day,
+        "win_days_reached": int(win_days_reached),
+        "win_days_avoided": int(win_days_avoided),
+        "n_days": int(n_days),
         "metric_definitions": {
             "readmissions_reached": (
                 "True held-out readmissions among patients the policy would "

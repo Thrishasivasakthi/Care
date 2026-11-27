@@ -1,22 +1,9 @@
 import React, { useEffect, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../api.js";
-import { AssumptionTag, Card, ErrorBox, Spinner, Stat } from "../components/bits.jsx";
+import { AssumptionTag, Card, ErrorBox, Spinner } from "../components/bits.jsx";
 
-const COLORS = {
-  human: "#64748b",
-  risk_only: "#2563eb",
-  caretrace: "#0f766e",
-};
+const COLORS = { human: "#64748b", risk_only: "#2563eb", caretrace: "#0f766e" };
 
 export default function Duel() {
   const [session, setSession] = useState(null);
@@ -27,230 +14,87 @@ export default function Duel() {
   const [busy, setBusy] = useState(false);
 
   const load = () => {
-    api("/duel/session")
-      .then((s) => {
-        setSession(s);
-        setPicked([]);
-        setResult(null);
-        setError(null);
-      })
-      .catch((e) => setError(e.message));
+    api("/duel/session").then((s) => { setSession(s); setPicked([]); setResult(null); setError(null); }).catch((e) => setError(e.message));
   };
-
   useEffect(load, []);
-
   if (error) return <ErrorBox message={error} />;
   if (!session) return <Spinner label="Loading duel…" />;
 
   const budget = hours * 60;
-  const used = picked.reduce(
-    (s, n) => s + session.patients.find((p) => p.patient_nbr === n).minutes,
-    0
-  );
+  const used = picked.reduce((sum, nbr) => sum + session.patients.find((p) => p.patient_nbr === nbr).minutes, 0);
+  const remaining = Math.max(0, budget - used);
+  const utilization = budget ? Math.min(100, used / budget * 100) : 0;
+  const tone = utilization >= 100 ? "danger" : utilization >= 80 ? "warning" : "safe";
 
   const toggle = (nbr) => {
     if (result) return;
     const p = session.patients.find((x) => x.patient_nbr === nbr);
-    if (picked.includes(nbr)) {
-      setPicked(picked.filter((x) => x !== nbr));
-      return;
-    }
-    if (used + p.minutes > budget) return; // block over-budget
+    if (picked.includes(nbr)) { setPicked(picked.filter((x) => x !== nbr)); return; }
+    if (used + p.minutes > budget) return;
     setPicked([...picked, nbr]);
   };
 
   const reveal = async () => {
     setBusy(true);
     try {
-      const r = await api("/duel/score", {
-        method: "POST",
-        body: { hours, picked_patient_nbrs: picked },
-      });
+      const r = await api("/duel/score", { method: "POST", body: { hours, picked_patient_nbrs: picked } });
       setResult(r);
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setBusy(false);
-    }
+    } catch (e) { setError(e.message); } finally { setBusy(false); }
   };
 
-  const chartData = result
-    ? [
-        {
-          name: "readmissions reached",
-          human: result.strategies.human.readmissions_reached,
-          risk_only: result.strategies.risk_only.readmissions_reached,
-          caretrace: result.strategies.caretrace.readmissions_reached,
-        },
-        {
-          name: "expected avoided",
-          human: result.strategies.human.expected_avoided_readmissions,
-          risk_only: result.strategies.risk_only.expected_avoided_readmissions,
-          caretrace: result.strategies.caretrace.expected_avoided_readmissions,
-        },
-      ]
-    : [];
+  const chartData = result ? [
+    { name: "Reached", human: result.strategies.human.readmissions_reached, risk_only: result.strategies.risk_only.readmissions_reached, caretrace: result.strategies.caretrace.readmissions_reached },
+    { name: "Expected avoided", human: result.strategies.human.expected_avoided_readmissions, risk_only: result.strategies.risk_only.expected_avoided_readmissions, caretrace: result.strategies.caretrace.expected_avoided_readmissions },
+  ] : [];
 
-  return (
-    <div className="space-y-4">
-      <ErrorBox message={error} />
+  return <div className="duel-page">
+    <ErrorBox message={error} />
+    <div className="duel-heading-row">
+      <div><div className="duel-eyebrow">HUMAN JUDGMENT VS OPTIMIZATION</div><h2>Strategy Duel</h2><p>Choose who gets a care-team call. Stay within the same time budget, then compare the outcomes.</p></div>
+      <div className="duel-patient-count"><strong>{session.patients.length}</strong><span>patients in this round</span></div>
+    </div>
 
-      <Card title="Beat the AI — 15 patients, your budget vs two strategies">
-        <p className="text-sm text-slate-600 mb-3">
-          Risk is hidden. Each patient shows age band, top drivers and the matched
-          intervention + minutes. Pick the patients you would call, staying inside
-          the budget. Then press <b>Reveal</b> to score your picks against
-          risk-only and CareTrace on both metrics. Nothing is rigged.
-        </p>
+    <Card title="Your care-team budget" right={<span className="duel-live-label"><i /> SELECTION ROUND</span>}>
+      <div className="duel-budget-controls">
+        <div><label htmlFor="duel-budget">Available time</label><select id="duel-budget" value={hours} onChange={(e) => { setHours(Number(e.target.value)); setPicked([]); setResult(null); }} disabled={!!result} className="duel-budget-select">{[1, 2, 3, 4, 6, 8].map((h) => <option key={h} value={h}>{h} hour{h > 1 ? "s" : ""} · {h * 60} min</option>)}</select></div>
+        <div className="duel-budget-numbers"><div><span>Time used</span><strong>{used}<small> / {budget} min</small></strong></div><div><span>Remaining</span><strong>{remaining}<small> min</small></strong></div><div><span>Patients picked</span><strong>{picked.length}<small> / {session.patients.length}</small></strong></div></div>
+      </div>
+      <div className="duel-progress-track"><div className={"duel-progress-fill " + tone} style={{ width: utilization + "%" }} /></div>
+      <div className="duel-progress-caption"><span>{Math.round(utilization)}% of available time allocated</span><span className={"duel-budget-state " + tone}>{tone === "danger" ? "Budget fully used" : tone === "warning" ? "Approaching limit" : "Within budget"}</span></div>
+    </Card>
 
-        <div className="flex flex-wrap items-center gap-4 mb-3">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-slate-700">Budget</label>
-            <select
-              value={hours}
-              onChange={(e) => {
-                setHours(Number(e.target.value));
-                setPicked([]);
-                setResult(null);
-              }}
-              className="text-sm border border-slate-300 rounded px-2 py-1.5"
-              disabled={!!result}
-            >
-              {[1, 2, 3, 4, 6, 8].map((h) => (
-                <option key={h} value={h}>
-                  {h} h ({h * 60} min)
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="text-sm">
-            <span className="text-slate-500">minutes used</span>{" "}
-            <span
-              className={`font-semibold ${
-                used >= budget ? "text-rose-700" : "text-teal-800"
-              }`}
-            >
-              {used} / {budget}
-            </span>
-          </div>
-          <div className="text-sm text-slate-500">
-            picked {picked.length} of {session.patients.length}
-          </div>
-        </div>
+    <div className="duel-selection-header"><div><h3>Select your patients</h3><p>Risk scores are hidden. Choose based on the visible patient context and matched intervention.</p></div><span>{picked.length} selected</span></div>
+    <div className="duel-patient-grid">
+      {session.patients.map((p) => {
+        const isPicked = picked.includes(p.patient_nbr);
+        const overBudget = !isPicked && used + p.minutes > budget;
+        return <button key={p.patient_nbr} disabled={!!result || overBudget} title={overBudget ? "Not enough minutes remaining for this intervention" : isPicked ? "Remove from your selection" : "Add patient to your selection"} onClick={() => toggle(p.patient_nbr)} className={"duel-patient-card " + (isPicked ? "selected" : "") + (overBudget ? " over-budget" : "")}>
+          <div className="duel-patient-card-top"><span className="duel-patient-id">PATIENT #{p.patient_nbr}</span><span className="duel-age">{p.age}</span></div>
+          <div className="duel-driver-label">TOP MODIFIABLE DRIVERS</div>
+          <div className="duel-drivers">{p.top_drivers.map((driver) => <span key={driver}>{driver}</span>)}</div>
+          <div className="duel-action-row"><div><small>MATCHED INTERVENTION</small><b>{p.action}</b></div><div className="duel-minutes">{p.minutes}<small>min</small></div></div>
+          <div className="duel-card-select-state">{isPicked ? <><span>✓</span> Added to your calls</> : overBudget ? "Over remaining budget" : "＋ Add patient"}</div>
+        </button>;
+      })}
+    </div>
 
-        <div className="grid md:grid-cols-3 gap-2">
-          {session.patients.map((p) => {
-            const isPicked = picked.includes(p.patient_nbr);
-            const overBudget = !isPicked && used + p.minutes > budget;
-            return (
-              <button
-                key={p.patient_nbr}
-                disabled={!!result || overBudget}
-                onClick={() => toggle(p.patient_nbr)}
-                className={`text-left border rounded-lg p-3 transition ${
-                  isPicked
-                    ? "border-teal-500 bg-teal-50"
-                    : overBudget
-                    ? "border-slate-200 bg-slate-50 opacity-50 cursor-not-allowed"
-                    : "border-slate-200 bg-white hover:bg-slate-50"
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-mono text-xs text-slate-500">
-                    #{p.patient_nbr}
-                  </span>
-                  <span className="text-xs text-slate-500">{p.age}</span>
-                </div>
-                <div className="text-xs text-slate-700 mt-1">
-                  {p.top_drivers.join(", ")}
-                </div>
-                <div className="text-xs text-teal-800 mt-1">
-                  {p.action}{" "}
-                  <span className="text-slate-400">({p.minutes} min)</span>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+    <div className="duel-action-bar">
+      <div className="duel-action-hint">{result ? "Round scored. Reset to try a different strategy." : "Your selections stay private until you reveal the score."}</div>
+      <div className="duel-action-buttons">
+        <button className="duel-reset-button" onClick={() => { setPicked([]); setResult(null); }}>Reset picks</button>
+        <button className="duel-reveal-button" onClick={reveal} disabled={busy || picked.length === 0 || !!result}>{busy ? "Scoring…" : result ? "Results revealed" : "Reveal results"} <span>↗</span></button>
+      </div>
+    </div>
 
-        <div className="flex gap-2 mt-4">
-          <button
-            onClick={reveal}
-            disabled={busy || picked.length === 0 || !!result}
-            className="px-4 py-2 rounded-md bg-teal-700 text-white text-sm disabled:opacity-40"
-          >
-            {busy ? "Scoring…" : "Reveal"}
-          </button>
-          <button
-            onClick={() => {
-              setPicked([]);
-              setResult(null);
-            }}
-            className="px-4 py-2 rounded-md border border-slate-300 text-sm"
-          >
-            Reset
-          </button>
+    {result && <>
+      <div className="duel-result-banner"><div className="duel-result-icon">✦</div><div><div className="duel-eyebrow">ROUND COMPLETE</div><strong>{result.sentence}</strong></div></div>
+      <Card title="Same patients. Same time budget. Three strategies." right={<AssumptionTag />}>
+        <div className="duel-result-legend"><span><i style={{background:COLORS.human}} /> Your picks</span><span><i style={{background:COLORS.risk_only}} /> Risk-only</span><span><i style={{background:COLORS.caretrace}} /> CareTrace</span></div>
+        <div className="duel-results-layout">
+          <div className="duel-result-chart"><ResponsiveContainer width="100%" height={270}><BarChart data={chartData} margin={{top:10,right:8,left:0,bottom:5}}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E8EDF2" /><XAxis dataKey="name" tick={{fontSize:10,fill:"#64748B"}} axisLine={false} tickLine={false} /><YAxis tick={{fontSize:10,fill:"#94A3B8"}} axisLine={false} tickLine={false} /><Tooltip contentStyle={{borderRadius:12,border:"1px solid #E2E8F0",fontSize:11}} /><Bar dataKey="human" name="Your picks" fill={COLORS.human} radius={[5,5,0,0]} /><Bar dataKey="risk_only" name="Risk-only" fill={COLORS.risk_only} radius={[5,5,0,0]} /><Bar dataKey="caretrace" name="CareTrace" fill={COLORS.caretrace} radius={[5,5,0,0]} /></BarChart></ResponsiveContainer></div>
+          <div className="duel-result-table-wrap"><table className="duel-result-table"><thead><tr><th>Strategy</th><th>Calls</th><th>Minutes</th><th>Reached</th><th>Avoided*</th></tr></thead><tbody>{Object.entries(result.strategies).map(([key,v]) => <tr key={key}><td><span className={"duel-strategy-dot " + key} />{key === "human" ? "Your picks" : key.replace("_"," ")}</td><td>{v.calls_made}</td><td>{v.minutes_used}</td><td>{v.readmissions_reached}</td><td>{v.expected_avoided_readmissions.toFixed(3)}</td></tr>)}</tbody></table><p className="duel-result-note">{result.note} Expected avoided readmissions use assumed intervention effects, not causal evidence.</p></div>
         </div>
       </Card>
-
-      {result && (
-        <>
-          <div
-            className={`rounded-md px-3 py-2 text-sm font-medium ${
-              result.human_wins.length
-                ? "border border-emerald-300 bg-emerald-50 text-emerald-800"
-                : "border border-slate-300 bg-slate-50 text-slate-700"
-            }`}
-          >
-            {result.sentence}
-          </div>
-
-          <Card title="Scored on the same 15 patients and the same budget">
-            <div className="grid md:grid-cols-2 gap-6">
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip />
-                  <Bar dataKey="human" name="you" fill={COLORS.human} />
-                  <Bar dataKey="risk_only" name="risk-only" fill={COLORS.risk_only} />
-                  <Bar dataKey="caretrace" name="CareTrace" fill={COLORS.caretrace} />
-                </BarChart>
-              </ResponsiveContainer>
-              <div>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-[11px] uppercase text-slate-500 border-b border-slate-200">
-                      <th className="py-1">strategy</th>
-                      <th className="text-right">calls</th>
-                      <th className="text-right">minutes</th>
-                      <th className="text-right">reached</th>
-                      <th className="text-right">avoided</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(result.strategies).map(([k, v]) => (
-                      <tr key={k} className="border-b border-slate-100">
-                        <td className="py-1 font-medium">{k.replace("_", " ")}</td>
-                        <td className="text-right">{v.calls_made}</td>
-                        <td className="text-right">{v.minutes_used}</td>
-                        <td className="text-right">{v.readmissions_reached}</td>
-                        <td className="text-right">
-                          {v.expected_avoided_readmissions.toFixed(3)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="text-[11px] text-slate-500 mt-2">
-                  {result.note} <AssumptionTag />
-                </div>
-              </div>
-            </div>
-          </Card>
-        </>
-      )}
-    </div>
-  );
+    </>}
+  </div>;
 }
