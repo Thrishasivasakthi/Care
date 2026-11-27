@@ -227,7 +227,7 @@ export default function Ops() {
           <div className="ops-legend">{POLICY_ORDER.filter((k) => replay.policies?.[k]).map((k) => <span key={k}><i style={{ background: COLORS[k] }} />{LABELS[k]}</span>)}</div>
           <div className="ops-definitions">{replay.metric_definitions.expected} {replay.metric_definitions.eligibility}</div>
         </>}
-      </Card>
+      </Card></div>
 
     </div>
 
