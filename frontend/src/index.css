@@ -1,20 +1,92 @@
 @import "tailwindcss";
 
-html,
-body,
-#root {
-  height: 100%;
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #172b3a;
+  background: #f4f7f8;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
+html, body, #root { min-height: 100%; margin: 0; }
+body { background: #f4f7f8; color: #172b3a; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
 
-body {
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
-  background: #f6f7f9;
-  color: #111827;
+.app-shell { display: flex; min-height: 100vh; background: #f4f7f8; }
+.app-sidebar {
+  width: 254px; flex: 0 0 254px; min-height: 100vh; box-sizing: border-box;
+  padding: 28px 17px 18px; display: flex; flex-direction: column;
+  color: #dce8e9; background: #102d32; position: sticky; top: 0; height: 100vh;
 }
+.brand-lockup { display: flex; align-items: center; gap: 12px; padding: 0 9px 30px; }
+.brand-mark { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: #d9f4e9; color: #12594d; font-weight: 800; letter-spacing: -.04em; }
+.brand-name { color: #fff; font-size: 19px; line-height: 1.1; font-weight: 750; letter-spacing: -.03em; }
+.brand-caption { color: #9db7b8; font-size: 11px; margin-top: 4px; letter-spacing: .04em; }
+.sidebar-section-label, .eyebrow { font-size: 10px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+.sidebar-section-label { color: #7f9d9f; padding: 0 11px 11px; }
+.sidebar-nav { display: grid; gap: 6px; }
+.nav-item { width: 100%; border: 1px solid transparent; border-radius: 11px; background: transparent; color: #b8cdce; padding: 11px 10px; display: flex; align-items: center; gap: 11px; text-align: left; position: relative; transition: .18s ease; }
+.nav-item:hover { background: #193b40; color: #fff; }
+.nav-item.active { color: #fff; background: #1d4447; border-color: #31595b; box-shadow: inset 3px 0 #7ed6b2; }
+.nav-index { font-size: 10px; font-weight: 700; color: #78999a; width: 20px; }
+.nav-copy { display: grid; gap: 3px; }
+.nav-label { font-size: 13px; font-weight: 650; }
+.nav-hint { color: #8eaaab; font-size: 10px; }
+.nav-indicator { margin-left: auto; width: 6px; height: 6px; border-radius: 50%; background: #8de0bd; }
+.sidebar-spacer { flex: 1; min-height: 30px; }
+.sidebar-note { padding: 14px; border: 1px solid #315155; background: #17383d; border-radius: 12px; }
+.sidebar-note-kicker { color: #8de0bd; font-size: 9px; font-weight: 800; letter-spacing: .13em; }
+.sidebar-note p { color: #b7caca; font-size: 11px; line-height: 1.6; margin: 8px 0 0; }
+.sidebar-footer { display: flex; align-items: center; gap: 8px; padding: 17px 8px 0; color: #91abad; font-size: 11px; }
+.status-dot { width: 7px; height: 7px; display: inline-block; border-radius: 50%; background: #46bf8a; box-shadow: 0 0 0 3px #46bf8a22; }
+.app-main { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.topbar { min-height: 76px; padding: 14px clamp(18px, 3vw, 42px); box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 18px; background: #fff; border-bottom: 1px solid #e3ebed; }
+.topbar-context .eyebrow, .page-intro .eyebrow { color: #779094; }
+.topbar-title { font-size: 17px; font-weight: 750; color: #17343a; margin-top: 4px; letter-spacing: -.02em; }
+.role-control { display: flex; align-items: center; gap: 11px; }
+.role-caption { color: #7a8d91; font-size: 11px; }
+.role-switch { display: flex; padding: 3px; border: 1px solid #dce6e7; background: #f6f9f9; border-radius: 10px; gap: 2px; }
+.role-switch button { border: 0; background: transparent; color: #60777b; padding: 7px 11px; border-radius: 7px; font-size: 11px; font-weight: 650; }
+.role-switch button.selected { color: #fff; background: #176b5c; box-shadow: 0 1px 2px #0d3d3522; }
+.page-content { width: 100%; max-width: 1540px; box-sizing: border-box; margin: 0 auto; padding: 30px clamp(18px, 3vw, 42px) 42px; flex: 1; }
+.page-intro { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 23px; }
+.page-intro h1 { color: #17343a; font-size: clamp(24px, 2.2vw, 30px); line-height: 1.15; letter-spacing: -.045em; font-weight: 780; margin: 7px 0 5px; }
+.page-intro p { color: #71858a; font-size: 13px; margin: 0; }
+.page-date { display: flex; align-items: center; gap: 8px; padding: 8px 11px; color: #607a78; border: 1px solid #dce9e4; border-radius: 999px; background: #f4faf7; font-size: 10px; white-space: nowrap; }
+.app-footer { padding: 17px clamp(18px, 3vw, 42px); border-top: 1px solid #e2e9ea; background: #fff; color: #839397; font-size: 10px; line-height: 1.65; }
+.footer-rule { color: #45666a; font-weight: 700; margin-bottom: 3px; }
 
-/* thin clinical tables */
-table.compact th,
-table.compact td {
-  padding: 0.45rem 0.6rem;
+/* Shared component polish */
+section.bg-white.border { border-color: #e2eaeb; border-radius: 14px; box-shadow: 0 3px 12px #17343a08; overflow: hidden; }
+section.bg-white.border > div:first-child { border-color: #edf1f2; padding: 15px 19px; }
+section.bg-white.border h2 { color: #203d42; font-size: 13px; letter-spacing: -.01em; }
+section.bg-white.border > div:last-child { padding: 18px 19px; }
+table.compact th, table.compact td { padding: .72rem .7rem; }
+table.compact thead th { font-size: 10px; letter-spacing: .08em; }
+input[type="range"] { accent-color: #16745f; }
+input:not([type="range"]), select, textarea { border-color: #d8e3e5; border-radius: 8px; }
+@media (max-width: 850px) {
+  .app-sidebar { width: 210px; flex-basis: 210px; padding-inline: 12px; }
+  .page-content { padding-top: 23px; }
+}
+@media (max-width: 680px) {
+  .app-shell { display: block; }
+  .app-sidebar { position: static; width: 100%; height: auto; min-height: 0; padding: 13px 14px 10px; }
+  .brand-lockup { padding: 0 4px 12px; }
+  .brand-mark { width: 35px; height: 35px; border-radius: 10px; }
+  .brand-name { font-size: 16px; }
+  .sidebar-section-label, .sidebar-spacer, .sidebar-note, .sidebar-footer { display: none; }
+  .sidebar-nav { display: flex; overflow-x: auto; gap: 5px; padding-bottom: 2px; }
+  .nav-item { width: auto; flex: 0 0 auto; padding: 9px 10px; }
+  .nav-index, .nav-hint, .nav-indicator { display: none; }
+  .nav-label { white-space: nowrap; font-size: 11px; }
+  .topbar { min-height: 64px; padding: 10px 15px; }
+  .role-caption { display: none; }
+  .role-switch button { padding: 7px 8px; font-size: 10px; }
+  .page-content { padding: 22px 14px 30px; }
+  .page-intro { align-items: start; flex-direction: column; margin-bottom: 17px; }
+  .page-intro h1 { font-size: 24px; }
+  .page-date { display: none; }
+  .app-footer { padding: 14px; }
+  section.bg-white.border > div:last-child { padding: 14px; }
 }
