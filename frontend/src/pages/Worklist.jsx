@@ -122,6 +122,7 @@ export default function Worklist({ role, onOpenPatient }) {
   const previousRects = useRef(new Map());
   const previousRanks = useRef(new Map());
   const previousSelected = useRef(new Set());
+  const hasRenderedSelection = useRef(false);
   const [rankMovements, setRankMovements] = useState({});
   const [enteredIds, setEnteredIds] = useState([]);
 
@@ -168,12 +169,15 @@ export default function Worklist({ role, onOpenPatient }) {
         );
       }
       const oldRank = previousRanks.current.get(id);
-      if (oldRank !== undefined && oldRank !== rank) moved[id] = { delta: oldRank - rank };
-      if (!previousSelected.current.has(id)) entered.push(id);
+      if (hasRenderedSelection.current && oldRank !== undefined && oldRank !== rank) {
+        moved[id] = { delta: oldRank - rank };
+      }
+      if (hasRenderedSelection.current && !previousSelected.current.has(id)) entered.push(id);
     });
 
     previousRanks.current = nextRanks;
     previousSelected.current = nextSelected;
+    hasRenderedSelection.current = true;
     previousRects.current = new Map(rows.map((row) => [String(row.dataset.patientId), row.getBoundingClientRect()]));
     setRankMovements(moved);
     setEnteredIds(entered);
