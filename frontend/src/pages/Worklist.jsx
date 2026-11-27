@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { api, pct } from "../api.js";
 import { Card, ErrorBox, Spinner, StatusChip } from "../components/bits.jsx";
 
@@ -59,23 +59,137 @@ function policyValue(comparison, name, field) {
   return Number(row?.[field]) || 0;
 }
 
+function useReducedMotion() {
+  const [reduced, setReduced] = useState(() =>
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
+  }, []);
+  return reduced;
+}
+
+function CountUp({ value, duration = 400, decimals = 0 }) {
+  const reducedMotion = useReducedMotion();
+  const target = Number(value) || 0;
+  const [display, setDisplay] = useState(target);
+  const previous = useRef(target);
+
+  useEffect(() => {
+    const from = previous.current;
+    previous.current = target;
+    if (reducedMotion || from === target) {
+      setDisplay(target);
+      return undefined;
+    }
+    let frame = 0;
+    const started = performance.now();
+    const tick = (now) => {
+      const progress = Math.min(1, (now - started) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplay(from + (target - from) * eased);
+      if (progress < 1) frame = requestAnimationFrame(tick);
+      else setDisplay(target);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [target, duration, reducedMotion]);
+
+  return <>{display.toFixed(decimals)}</>;
+}
+
+function RankMovement({ movement }) {
+  if (!movement) return null;
+  return (
+    <span className={`rank-movement ${movement.delta > 0 ? "up" : "down"}`} aria-label={`Moved ${Math.abs(movement.delta)} positions ${movement.delta > 0 ? "up" : "down"}`}>
+      <span aria-hidden="true">{movement.delta > 0 ? "↑" : "↓"}</span>
+      {Math.abs(movement.delta)}
+    </span>
+  );
+}
+
 export default function Worklist({ role, onOpenPatient }) {
   const [hours, setHours] = useState(4);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const reducedMotion = useReducedMotion();
+  const tableRef = useRef(null);
+  const rowRefs = useRef(new Map());
+  const previousRects = useRef(new Map());
+  const previousRanks = useRef(new Map());
+  const previousSelected = useRef(new Set());
+  const [rankMovements, setRankMovements] = useState({});
+  const [enteredIds, setEnteredIds] = useState([]);
 
   const load = useCallback((h) => {
     api(`/worklist?hours=${h}`)
       .then((d) => {
+        if (tableRef.current && !reducedMotion) {
+          const rects = new Map();
+          tableRef.current.querySelectorAll("tbody tr[data-patient-id]").forEach((row) => {
+            rects.set(String(row.dataset.patientId), row.getBoundingClientRect());
+          });
+          previousRects.current = rects;
+        }
         setData(d);
         setError(null);
       })
       .catch((e) => setError(e.message));
-  }, []);
+  }, [reducedMotion]);
 
   useEffect(() => {
     load(hours);
   }, [hours, load]);
+
+
+  useLayoutEffect(() => {
+    if (!data || !tableRef.current) return;
+    const rows = Array.from(tableRef.current.querySelectorAll("tbody tr[data-patient-id]"));
+    const nextRanks = new Map();
+    const nextSelected = new Set((data.selection || []).map((row) => String(row.patient_id)));
+    const moved = {};
+    const entered = [];
+
+    rows.forEach((row) => {
+      const id = String(row.dataset.patientId);
+      const rank = Number(row.dataset.rank);
+      nextRanks.set(id, rank);
+      const oldRect = previousRects.current.get(id);
+      const newRect = row.getBoundingClientRect();
+      if (!reducedMotion && oldRect && oldRect.top !== newRect.top) {
+        const deltaY = oldRect.top - newRect.top;
+        row.animate(
+          [{ transform: `translateY(${deltaY}px)` }, { transform: "translateY(0)" }],
+          { duration: 300, easing: "cubic-bezier(0.2, 0.75, 0.25, 1)" }
+        );
+      }
+      const oldRank = previousRanks.current.get(id);
+      if (oldRank !== undefined && oldRank !== rank) moved[id] = { delta: oldRank - rank };
+      if (!previousSelected.current.has(id)) entered.push(id);
+    });
+
+    previousRanks.current = nextRanks;
+    previousSelected.current = nextSelected;
+    previousRects.current = new Map(rows.map((row) => [String(row.dataset.patientId), row.getBoundingClientRect()]));
+    setRankMovements(moved);
+    setEnteredIds(entered);
+
+    if (!reducedMotion && Object.keys(moved).length) {
+      const timer = window.setTimeout(() => setRankMovements({}), 2000);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [data, reducedMotion]);
+
+  useEffect(() => {
+    if (!enteredIds.length || reducedMotion) return undefined;
+    const timer = window.setTimeout(() => setEnteredIds([]), 1000);
+    return () => window.clearTimeout(timer);
+  }, [enteredIds, reducedMotion]);
 
   const metrics = useMemo(() => {
     if (!data) return null;
@@ -131,17 +245,17 @@ export default function Worklist({ role, onOpenPatient }) {
           <div className="worklist-kpis">
             <div className="worklist-kpi">
               <div className="kpi-label"><i className="kpi-dot amber" />Unreviewed flags</div>
-              <div className="kpi-value">{data.unreviewed_flags ?? "—"}</div>
+              <div className="kpi-value"><CountUp value={data.unreviewed_flags ?? 0} /></div>
               <div className="kpi-detail">Awaiting clinician review</div>
             </div>
             <div className="worklist-kpi">
               <div className="kpi-label">Patients selected</div>
-              <div className="kpi-value">{data.selection.length}<span className="kpi-total"> / {data.cohort_size}</span></div>
+              <div className="kpi-value"><CountUp value={data.selection.length} /><span className="kpi-total"> / {data.cohort_size}</span></div>
               <div className="kpi-detail">Eligible for a matched action</div>
             </div>
             <div className="worklist-kpi">
               <div className="kpi-label">Minutes used</div>
-              <div className="kpi-value">{metrics.used}<span className="kpi-total"> / {data.budget_minutes}</span></div>
+              <div className="kpi-value"><CountUp value={metrics.used} /><span className="kpi-total"> / {data.budget_minutes}</span></div>
               <div className="kpi-progress"><span style={{ width: `${Math.min(100, data.budget_minutes ? metrics.used / data.budget_minutes * 100 : 0)}%` }} /></div>
             </div>
           </div>
@@ -165,10 +279,20 @@ export default function Worklist({ role, onOpenPatient }) {
                 <thead><tr>
                   <th>#</th><th>Patient</th><th>Risk</th><th>Top modifiable driver</th><th>Matched action</th><th className="text-right">Min</th><th>Status</th><th className="text-right">vs risk-only</th>
                 </tr></thead>
-                <tbody>
+                <tbody ref={tableRef}>
                   {data.selection.map((r) => (
-                    <tr key={r.patient_id} onClick={() => onOpenPatient(r.patient_id)} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenPatient(r.patient_id); } }}>
-                      <td><span className="rank-circle">{r.rank}</span></td>
+                    <tr
+                      key={r.patient_id}
+                      ref={(node) => {
+                        if (node) rowRefs.current.set(String(r.patient_id), node);
+                        else rowRefs.current.delete(String(r.patient_id));
+                      }}
+                      data-patient-id={r.patient_id}
+                      data-rank={r.rank}
+                      className={enteredIds.includes(String(r.patient_id)) ? "worklist-row-entered" : ""}
+                      onClick={() => onOpenPatient(r.patient_id)}
+                      tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenPatient(r.patient_id); } }}>
+                      <td><span className="rank-cell"><span className="rank-circle">{r.rank}</span><RankMovement movement={rankMovements[String(r.patient_id)]} /></span></td>
                       <td><strong className="patient-id">#{r.patient_nbr}</strong></td>
                       <td><RiskMeter value={r.risk} /></td>
                       <td><span className="work-driver-chip">{r.driver || "—"}</span></td>
