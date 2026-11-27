@@ -45,7 +45,9 @@ export default function App() {
   const [role, setRoleState] = useState(getRole());
   const [tab, setTab] = useState("Worklist");
   const [patientId, setPatientId] = useState(null);
-  const [meta, setMeta] = useState(null);\n  const [demoIndex, setDemoIndex] = useState(null);\n  const demoActive = demoIndex !== null;
+  const [meta, setMeta] = useState(null);
+  const [demoIndex, setDemoIndex] = useState(null);
+  const demoActive = demoIndex !== null;
 
   useEffect(() => {
     api("/meta").then(setMeta).catch(() => {});
