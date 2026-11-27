@@ -184,6 +184,7 @@ function HandoutPaper({ patientNbr, demoDate, content, language }) {
       {!d ? <Spinner /> : <div className="discharge-task-list">
         {!d.tasks?.length ? <div className="discharge-empty">No follow-up tasks yet. Approve a care plan on the patient page first.</div> : d.tasks.map((task, index) => {
           const future = Boolean(task.due_date && d.demo_date && task.due_date > d.demo_date);
+          const displayStatus = future && task.status === "Done" ? "Due" : task.status;
           return <div className="discharge-task-row" key={task.id}>
             <div className="discharge-task-marker"><span>{index + 1}</span></div>
             <div className="discharge-task-main"><div className="discharge-task-title">{task.title}</div><div className="discharge-task-meta"><span>{task.due_date || "Date not set"}</span>{future && <span className="discharge-future-tag">Upcoming</span>}</div></div>
