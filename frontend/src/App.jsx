@@ -5,24 +5,32 @@ import Patient from "./pages/Patient.jsx";
 import Discharge from "./pages/Discharge.jsx";
 import Ops from "./pages/Ops.jsx";
 import Duel from "./pages/Duel.jsx";
-import { InfoBanner } from "./components/bits.jsx";
 
 const TABS = [
-  { id: "Worklist", label: "Care worklist", short: "Worklist", hint: "Prioritised patient queue", mark: "01", icon: "inbox" },
-  { id: "Discharge", label: "Discharge", short: "Discharge", hint: "Instructions & follow-ups", mark: "02", icon: "clipboard" },
-  { id: "Duel", label: "Strategy duel", short: "Duel", hint: "Compare call strategies", mark: "03", icon: "scale" },
-  { id: "Ops", label: "Operations", short: "Ops", hint: "Model & service performance", mark: "04", icon: "activity" },
+  { id: "Worklist", label: "Worklist" },
+  { id: "Discharge", label: "Discharge" },
+  { id: "Duel", label: "Duel" },
+  { id: "Ops", label: "Ops" },
 ];
 
-function NavIcon({ name }) {
-  const common = { width: 19, height: 19, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": true };
+const ASSUMPTION_TEXT =
+  "Intervention effect sizes and avoided-readmission estimates are assumptions for this demo, not clinical predictions or evidence of causal impact. The model estimates 30-day readmission risk from historical data. It does not establish that an intervention will prevent a readmission. Use outputs as decision support only; clinician review remains required.";
+
+function Icon({ name, size = 18 }) {
   const paths = {
-    inbox: <><path d="M4 4h16v16H4z" /><path d="M4 13h4l2 3h4l2-3h4" /></>,
-    clipboard: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4.5h6M9 10h6M9 14h6M9 18h3" /><path d="M9 2.5h6v4H9z" /></>,
-    scale: <><path d="M12 3v18M5 6h14M7 6l-4 8h8L7 6ZM17 6l-4 8h8l-4-8Z" /><path d="M8 21h8" /></>,
-    activity: <><path d="M3 12h4l3-8 4 16 3-8h4" /></>,
+    search: <><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></>,
+    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
   };
-  return <svg {...common}>{paths[name] || paths.activity}</svg>;
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
+}
+
+function BrandMark() {
+  return <span className="brand-mark" aria-hidden="true">
+    <svg viewBox="0 0 32 32" width="24" height="24" fill="none">
+      <path d="M16 3.5 27 8v7.1c0 7-4.6 11.3-11 13.4C9.6 26.4 5 22.1 5 15.1V8l11-4.5Z" stroke="currentColor" strokeWidth="2" />
+      <path d="M9.5 16h4l2-4 3.2 8 2-4h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  </span>;
 }
 
 export default function App() {
@@ -50,94 +58,79 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const active = TABS.find((t) => t.id === (tab === "Patient" ? "Worklist" : tab));
+  const pageTitle = tab === "Patient" ? "Patient overview" : active?.label || "CareTrace";
+  const pageDescription = tab === "Patient"
+    ? "Review patient context, care recommendations and clinician decisions."
+    : ({
+        Worklist: "Prioritise 30-day readmission risk within the care team's available time.",
+        Discharge: "Prepare clear discharge instructions and coordinate follow-up.",
+        Duel: "Compare patient selections within a shared care-coordination budget.",
+        Ops: "Review model performance, replay results and operating assumptions.",
+      }[tab] || "");
 
   return (
-    <div className="app-shell min-h-screen">
-      <aside className="app-sidebar">
+    <div className="app-shell">
+      <header className="topbar">
         <div className="brand-lockup">
-          <div className="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" width="25" height="25" fill="none">
-              <path d="M16 3.5 27 8v7.1c0 7-4.6 11.3-11 13.4C9.6 26.4 5 22.1 5 15.1V8l11-4.5Z" stroke="currentColor" strokeWidth="2" />
-              <path d="M9.5 16h4l2-4 3.2 8 2-4h2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </div>
-          <div>
+          <BrandMark />
+          <div className="brand-copy">
             <div className="brand-name">CareTrace</div>
             <div className="brand-caption">Readmission risk before discharge</div>
           </div>
         </div>
 
-        <div className="sidebar-section-label">WORKSPACE</div>
-        <nav className="sidebar-nav" aria-label="Main navigation">
-          {TABS.map((item) => {
-            const selected = tab === item.id || (item.id === "Worklist" && tab === "Patient");
-            return (
-              <button key={item.id} onClick={() => goTab(item.id)} className={`nav-item ${selected ? "active" : ""}`} aria-current={selected ? "page" : undefined}>
-                <span className="nav-icon"><NavIcon name={item.icon} /></span>
-                <span className="nav-copy">
-                  <span className="nav-label">{item.label}</span>
-                  <span className="nav-hint">{item.hint}</span>
-                </span>
-              </button>
-            );
-          })}
+        <nav className="top-nav" aria-label="Main navigation">
+          {TABS.map((item) => (
+            <button key={item.id} onClick={() => goTab(item.id)} className={tab === item.id || (item.id === "Worklist" && tab === "Patient") ? "active" : ""} aria-current={tab === item.id || (item.id === "Worklist" && tab === "Patient") ? "page" : undefined}>
+              {item.label}
+            </button>
+          ))}
         </nav>
 
-        <div className="sidebar-spacer" />
-        <section className="sidebar-note" aria-label="Clinical safety">
-          <div className="sidebar-note-heading">
-            <span className="safety-icon"><svg viewBox="0 0 20 20" width="15" height="15" fill="none"><path d="M10 2.2 16 4.7v4.1c0 4-2.5 6.5-6 8-3.5-1.5-6-4-6-8V4.7l6-2.5Z" stroke="currentColor" strokeWidth="1.5"/><path d="m7 9.8 2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></span>
-            <span>Clinical safety</span>
-          </div>
-          <p>Decision support for care teams. Every high-risk flag requires clinician review.</p>
-        </section>
-        <div className="sidebar-footer"><span className="status-dot" /> Demo environment</div>
-      </aside>
-
-      <div className="app-main">
-        <header className="topbar">
-          <div className="breadcrumb" aria-label="Breadcrumb">
-            <span>Care coordination</span><span className="breadcrumb-divider">/</span>
-            <strong>{tab === "Patient" ? "Patient overview" : active?.short || "Workspace"}</strong>
-          </div>
-          <div className="topbar-actions">
-            <div className="live-pill"><span className="status-dot" /> Live demo data</div>
-            <div className="role-control">
-              <span className="role-avatar" aria-hidden="true">{role === "coordinator" ? "CO" : "CL"}</span>
-              <span className="role-caption">Viewing as</span>
-              <div className="role-switch" aria-label="Select role">
-                {["coordinator", "clinician"].map((r) => (
-                  <button key={r} onClick={() => switchRole(r)} className={role === r ? "selected" : ""} aria-pressed={role === r}>
-                    {r === "coordinator" ? "Coordinator" : "Clinician"}
-                  </button>
-                ))}
-              </div>
+        <div className="topbar-actions">
+          <button className="icon-button" type="button" aria-label="Search" title="Search (demo)">
+            <Icon name="search" />
+          </button>
+          <button className="icon-button notification-button" type="button" aria-label="Notifications" title="Notifications (demo)">
+            <Icon name="bell" />
+            <span className="notification-dot" />
+          </button>
+          <div className="role-control" aria-label="Select role">
+            <span className="role-avatar" aria-hidden="true">{role === "coordinator" ? "CO" : "CL"}</span>
+            <div className="role-switch">
+              {["coordinator", "clinician"].map((r) => (
+                <button key={r} onClick={() => switchRole(r)} className={role === r ? "selected" : ""} aria-pressed={role === r}>
+                  {r === "coordinator" ? "Coordinator" : "Clinician"}
+                </button>
+              ))}
             </div>
           </div>
-        </header>
+        </div>
+      </header>
 
-        <main className="page-content">
-          <div className="page-intro">
-            <div>
-              <div className="eyebrow">CARETRACE WORKSPACE</div>
-              <h1>{tab === "Patient" ? "Patient overview" : active?.label}</h1>
-              <p>{tab === "Patient" ? "Review patient context, care recommendations and clinician decisions." : active?.hint}</p>
-            </div>
+      <main className="page-content">
+        <div className="page-intro">
+          <div>
+            <h1>{pageTitle}</h1>
+            <p>{pageDescription}</p>
           </div>
+          <details className="assumptions-popover">
+            <summary><span className="info-mark">i</span> Assumptions</summary>
+            <div className="assumptions-content">{ASSUMPTION_TEXT}</div>
+          </details>
+        </div>
 
-          <div className="mb-4"><InfoBanner tone="warning">Intervention effect sizes and avoided-readmission estimates are assumptions for this demo, not clinical predictions or evidence of causal impact. Use the model output as decision support only; clinician review remains required.</InfoBanner></div>
+        {tab === "Worklist" && <Worklist role={role} onOpenPatient={openPatient} />}
+        {tab === "Patient" && <Patient patientId={patientId} role={role} onBack={() => goTab("Worklist")} />}
+        {tab === "Discharge" && <Discharge role={role} onOpenPatient={openPatient} />}
+        {tab === "Duel" && <Duel />}
+        {tab === "Ops" && <Ops />}
+      </main>
 
-          {tab === "Worklist" && <Worklist role={role} onOpenPatient={openPatient} />}
-          {tab === "Patient" && <Patient patientId={patientId} role={role} onBack={() => goTab("Worklist")} />}
-          {tab === "Discharge" && <Discharge role={role} onOpenPatient={openPatient} />}
-          {tab === "Duel" && <Duel />}
-          {tab === "Ops" && <Ops />}
-        </main>
-
-        <footer className="app-footer">
-          Decision support only — not a diagnostic tool. Intervention effects are assumptions, not predictions. Dataset: UCI Diabetes 130-US Hospitals (1999–2008), diabetes drugs only. High-risk flags require clinician review; decisions are logged.
-        </footer>
-      </div>
+      <footer className="app-footer">
+        <span>Clinical safety: decision support only, not a diagnostic tool. High-risk flags require clinician review; decisions are logged.</span>
+        <span>{ASSUMPTION_TEXT}</span>
+      </footer>
     </div>
   );
 }
