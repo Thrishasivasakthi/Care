@@ -212,6 +212,28 @@ export default function Worklist({ role, onOpenPatient }) {
 
   return (
     <div className="worklist-page">
+      <style>{`
+        .rank-cell { display:inline-flex; align-items:center; gap:6px; min-width:52px; }
+        .rank-movement {
+          display:inline-flex; align-items:center; gap:2px; padding:3px 5px; border-radius:999px;
+          font-size:10px; line-height:1; font-weight:800; font-variant-numeric:tabular-nums;
+          animation:rank-movement-in .18s ease-out both;
+        }
+        .rank-movement.up { color:#166534; background:#DCFCE7; }
+        .rank-movement.down { color:#9A3412; background:#FFEDD5; }
+        .worklist-row-entered { animation:worklist-row-arrive 1s ease-out both; }
+        @keyframes rank-movement-in {
+          from { opacity:0; transform:translateY(3px); }
+          to { opacity:1; transform:translateY(0); }
+        }
+        @keyframes worklist-row-arrive {
+          0%, 70% { background:#D8F3EC; }
+          100% { background:transparent; }
+        }
+        @media (prefers-reduced-motion:reduce) {
+          .rank-movement, .worklist-row-entered { animation:none !important; }
+        }
+      `}</style>
       <ErrorBox message={error} />
 
       {!data ? <Spinner label="Loading worklist…" /> : (
