@@ -120,6 +120,7 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const goTab = (t) => {
+    setDemoIndex(null);
     setTab(t);
     if (t !== "Patient") setPatientId(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -155,6 +156,7 @@ export default function App() {
         </nav>
 
         <div className="topbar-actions">
+          <button className="demo-start-button" type="button" onClick={startDemo}>Start 2-minute demo</button>
           <button className="icon-button" type="button" aria-label="Search" title="Search (demo)">
             <Icon name="search" />
           </button>
