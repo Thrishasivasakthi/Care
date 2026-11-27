@@ -14,28 +14,28 @@ SUPPORTED = ("hi", "mr", "ta")
 # List format so a slot never breaks a word ending.
 TEMPLATES: dict[str, str] = {
     "hi": (
-        "Ghar jaane ke baad ka nirdesh\n"
-        "- Apni {DRUG_1} doctor ke nirdesh ke anusaar lein. Dose skip ya double na karein.\n"
-        "- Aapki care team ne {INTERVENTION} schedule kiya hai. Aapki follow-up date {FOLLOWUP_DATE} hai.\n"
-        "- Aaram karein, khana aur paani normal tarah se lein.\n"
-        "- Agar tabiyat bahut kharab ho, turant emergency ya apni care team ko call karein.\n"
-        "- Yeh paper apne agle visit par le jaayein."
+        "अस्पताल से घर जाने के बाद के निर्देश\\n"
+        "- अपनी {DRUG_1} दवा डॉक्टर के निर्देशानुसार लें। खुराक छोड़ें या दोगुनी न करें।\\n"
+        "- आपकी देखभाल टीम ने {INTERVENTION} तय किया है। आपकी फॉलो-अप तारीख {FOLLOWUP_DATE} है।\\n"
+        "- आराम करें और सामान्य रूप से खाना-पीना जारी रखें।\\n"
+        "- यदि आपकी तबीयत बहुत बिगड़ जाए, तो तुरंत आपातकालीन विभाग जाएँ या अपनी देखभाल टीम को कॉल करें।\\n"
+        "- इस कागज़ को अपनी अगली मुलाकात पर साथ लाएँ।"
     ),
     "mr": (
-        "Gharagelgi nirdesh\n"
-        "- Tumchi {DRUG_1} doctoranchya nirdeshanusar ghyaa. Dose skip karoo naka.\n"
-        "- Tumchya care team ne {INTERVENTION} schedule kele ahe. Follow-up date {FOLLOWUP_DATE}.\n"
-        "- Vishraam ghyaa, jedha-pani samanya riti ne ghyaa.\n"
-        "- Jar tabiyat khup kharaab zali tar turant emergency la ja.\n"
-        "- He kaagad pudhchya visit la gheun ja."
+        "रुग्णालयातून घरी गेल्यानंतरच्या सूचना\\n"
+        "- {DRUG_1} औषध डॉक्टरांनी सांगितल्याप्रमाणे घ्या. मात्रा चुकवू नका किंवा दुप्पट घेऊ नका.\\n"
+        "- तुमच्या उपचार पथकाने {INTERVENTION} ठरवले आहे. तुमची फॉलो-अप तारीख {FOLLOWUP_DATE} आहे.\\n"
+        "- विश्रांती घ्या आणि नेहमीप्रमाणे खाणे-पिणे सुरू ठेवा.\\n"
+        "- प्रकृती खूप बिघडल्यास त्वरित आपत्कालीन विभागात जा किंवा उपचार पथकाशी संपर्क साधा.\\n"
+        "- पुढील भेटीला हे कागदपत्र सोबत आणा."
     ),
     "ta": (
-        "Veedu sellum podhu paadu\n"
-        "- Unga {DRUG_1} doctor solliya padhiye seyyunga. Dose thavaraamal thavaraamal.\n"
-        "- Unga care team {INTERVENTION} schedule pannirukkirargal. Follow-up thiyathi {FOLLOWUP_DATE}.\n"
-        "- Oyvu edunga, samanya unavu neer seyyunga.\n"
-        "- Unga uyirukku aspaththiriya irundhal emergency ku sellunga.\n"
-        "- Indha varthai unga muthal visit ku kondu vaanga."
+        "மருத்துவமனையிலிருந்து வீடு திரும்பிய பின் கடைப்பிடிக்க வேண்டியவை\\n"
+        "- உங்கள் {DRUG_1} மருந்தை மருத்துவர் கூறியபடி எடுத்துக்கொள்ளுங்கள். அளவைத் தவிர்க்கவோ இரட்டிப்பாக எடுத்துக்கொள்ளவோ வேண்டாம்.\\n"
+        "- உங்கள் பராமரிப்புக் குழு {INTERVENTION} ஏற்பாடு செய்துள்ளது. உங்கள் தொடர் சந்திப்பு தேதி {FOLLOWUP_DATE}.\\n"
+        "- ஓய்வெடுத்து, வழக்கம்போல் உணவு மற்றும் தண்ணீர் எடுத்துக்கொள்ளுங்கள்.\\n"
+        "- உடல்நிலை மிகவும் மோசமடைந்தால் உடனடியாக அவசர சிகிச்சைப் பிரிவுக்குச் செல்லுங்கள் அல்லது பராமரிப்புக் குழுவை அழையுங்கள்.\\n"
+        "- அடுத்த மருத்துவச் சந்திப்பிற்கு இந்தத் தாளைக் கொண்டு வாருங்கள்."
     ),
 }
 
