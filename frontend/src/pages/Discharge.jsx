@@ -60,7 +60,7 @@ function HandoutPaper({ patientNbr, demoDate, content, language }) {
     </div>
   );
 }
-\nexport default function Discharge({ role, onOpenPatient }) {
+export default function Discharge({ role, onOpenPatient }) {
   const [list, setList] = useState(null);
   const [patientId, setPatientId] = useState(null);
   const [d, setD] = useState(null);

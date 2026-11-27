@@ -125,7 +125,7 @@ export default function Worklist({ role, onOpenPatient, demoStep = null }) {
   const hasRenderedSelection = useRef(false);
   const [rankMovements, setRankMovements] = useState({});
   const [enteredIds, setEnteredIds] = useState([]);
-  const autoOpenedDemoPatient = useRef(false);\n  const autoOpenedDemoPatient = useRef(false);
+  const autoOpenedDemoPatient = useRef(false);
 
   const load = useCallback((h) => {
     api(`/worklist?hours=${h}`)
