@@ -149,7 +149,7 @@ function HandoutPaper({ patientNbr, demoDate, content, language }) {
 
       <div className="discharge-main-column">
         {!d ? <Spinner label="Loading discharge record…" /> : view === "instructions" ? <>
-          <Card title="Discharge handout" right={<button type="button" className="discharge-print-button" onClick={() => window.print()}>Print or save as PDF</button>}>
+          <div data-demo-target="discharge-handout"><Card title="Discharge handout" className="demo-discharge-card" right={<button type="button" className="discharge-print-button" onClick={() => window.print()}>Print or save as PDF</button>}>
             <div className="discharge-handout-head"><div><div className="discharge-section-eyebrow">AFTER YOUR HOSPITAL STAY</div><h2>Care instructions</h2><p>Review the information below with the patient before discharge.</p></div><span className={"discharge-verified-pill " + (ins.verified ? "verified" : "unverified")}>{ins.verified ? "✓ Record-verified slots" : "⚠ Verification needed"}</span></div>
             <HandoutPaper patientNbr={d.patient_nbr} demoDate={d.demo_date} content={ins} language="en" />
             <div className="discharge-source-note"><span>ⓘ</span><div><b>{ins.source === "llm" ? "LLM phrasing · record-filled slots" : "Fixed template · no LLM key"}</b><p>The LLM only phrases placeholder text. Code fills {Object.keys(ins.slots_used).join(", ") || "—"} from the patient record; it does not write drug names, dates, doses or numbers. {ins.note}</p></div></div>
