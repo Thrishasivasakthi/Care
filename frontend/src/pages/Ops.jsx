@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
-  Bar, BarChart, CartesianGrid, Cell, ComposedChart, ErrorBar, Line, LineChart,
-  ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, LabelList,
+  Bar, BarChart, CartesianGrid, Cell, Line, LineChart, Rectangle,
+  ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, LabelList, ErrorBar,
 } from "recharts";
 import { api, pct } from "../api.js";
 import { Card, ErrorBox, Spinner } from "../components/bits.jsx";
@@ -29,23 +29,49 @@ function GrainDefs() {
 function PolicyChart({ replay, metricKey, title }) {
   const rows = POLICY_ORDER.filter((key) => replay.policies?.[key]).map((key) => {
     const metric = replay.policies[key][metricKey];
-    return { name: LABELS[key] || key, key, mean: metric.mean, range: [Math.max(0, metric.mean - metric.p10), Math.max(0, metric.p90 - metric.mean)], p10: metric.p10, p90: metric.p90 };
+    const mean = Number(metric?.mean ?? 0);
+    const sd = Number(metric?.sd);
+    const hasSd = Number.isFinite(sd) && sd >= 0;
+    const meanMargin = hasSd ? (1.96 * sd) / Math.sqrt(200) : null;
+
+    return {
+      name: LABELS[key] || key,
+      key,
+      mean,
+      ci: hasSd ? [meanMargin, meanMargin] : undefined,
+    };
   });
+
   return <div className="ops-policy-chart">
     <h3>{title}</h3>
     <ResponsiveContainer width="100%" height={230}>
-      <ComposedChart data={rows} margin={{ top: 24, right: 14, left: -14, bottom: 4 }}>
-        <GrainDefs />
+      <BarChart data={rows} margin={{ top: 28, right: 14, left: -14, bottom: 4 }}>
         <CartesianGrid vertical={false} stroke="#E8EDF2" strokeDasharray="3 4" />
         <XAxis dataKey="name" tick={{ fontSize: 10, fill: "#64748B" }} axisLine={false} tickLine={false} />
         <YAxis tick={{ fontSize: 10, fill: "#64748B" }} axisLine={false} tickLine={false} />
-        <Tooltip formatter={(v, name, item) => [Number(v).toFixed(2), name === "mean" ? `Mean · p10–p90 ${item.payload.p10.toFixed(2)}–${item.payload.p90.toFixed(2)}` : name]} />
-        <Bar dataKey="mean" barSize={48} radius={[8, 8, 2, 2]}>
-          {rows.map((r) => <Cell key={r.key} fill={r.key === "caretrace" ? "url(#opsTeal)" : COLORS[r.key]} />)}
-          <LabelList dataKey="mean" position="top" formatter={(v) => Number(v).toFixed(2)} style={{ fill: "#334155", fontSize: 10, fontWeight: 700 }} />
-          <ErrorBar dataKey="range" direction="y" width={8} stroke="#334155" strokeWidth={1.2} />
+        <Tooltip formatter={(value) => [Number(value).toFixed(2), "Mean"]} />
+        <Bar
+          dataKey="mean"
+          barSize={48}
+          radius={[8, 8, 2, 2]}
+          shape={(props) => {
+            const widthScale = props.payload?.key === "caretrace" ? 1.2 : 1;
+            const width = props.width * widthScale;
+            return <Rectangle {...props} x={props.x - (width - props.width) / 2} width={width} />;
+          }}
+        >
+          {rows.map((row) => <Cell key={row.key} fill={COLORS[row.key]} />)}
+          {rows.some((row) => row.ci) && (
+            <ErrorBar dataKey="ci" direction="y" width={8} stroke="#CBD5E1" strokeWidth={1} />
+          )}
+          <LabelList
+            dataKey="mean"
+            position="top"
+            formatter={(value) => Number(value).toFixed(2)}
+            style={{ fill: "#334155", fontSize: 10, fontWeight: 700 }}
+          />
         </Bar>
-      </ComposedChart>
+      </BarChart>
     </ResponsiveContainer>
   </div>;
 }
@@ -135,8 +161,15 @@ export default function Ops() {
   const captureLift = m.top20_capture / .2;
   const care = replay?.policies?.caretrace;
   const raw = replay?.policies?.raw_risk;
-  const reachedLead = care && raw ? care.readmissions_reached.mean >= raw.readmissions_reached.mean : false;
-  const avoidedLead = care && raw ? care.expected_avoided_readmissions.mean >= raw.expected_avoided_readmissions.mean : false;
+  const isCareTraceHighest = (metricKey) => {
+    const careMean = Number(care?.[metricKey]?.mean);
+    const policyMeans = POLICY_ORDER
+      .map((key) => Number(replay?.policies?.[key]?.[metricKey]?.mean))
+      .filter(Number.isFinite);
+    return Number.isFinite(careMean) && policyMeans.length > 0 && careMean >= Math.max(...policyMeans);
+  };
+  const reachedLead = isCareTraceHighest("readmissions_reached");
+  const avoidedLead = isCareTraceHighest("expected_avoided_readmissions");
 
   return <div className="ops-page">
     <div className="ops-toolbar">
