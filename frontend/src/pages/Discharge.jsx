@@ -22,7 +22,44 @@ function TaskTimeline({ tasks, demoDate, onPatch }) {
   </div>;
 }
 
-export default function Discharge({ role, onOpenPatient }) {
+
+function HandoutPaper({ patientNbr, demoDate, content, language }) {
+  const rawLines = String(content?.text || "").split(/\\r?\\n/).map((line) => line.replace(/^\\s*[-•]\\s*/, "").trim()).filter(Boolean);
+  let heading = "After your hospital stay";
+  if (rawLines.length && rawLines[0].length < 65 && !/[.!?।]$/.test(rawLines[0])) heading = rawLines.shift();
+  let lines = rawLines;
+  if (lines.length === 1) {
+    const split = lines[0].split(/(?<=[.!?।])\\s+/).filter(Boolean);
+    if (split.length > 1) lines = split;
+  }
+  const helpIndex = lines.findIndex((line) => /emergency|much worse|worse|urgent|आपातकाल|बिगड़|அவசர|மோசமட|आपत्कालीन|बिघड/i.test(line));
+  const helpText = helpIndex >= 0 ? lines[helpIndex] : null;
+  const steps = lines.filter((_, index) => index !== helpIndex);
+  const filled = Object.keys(content?.slots_used || {}).length;
+  return (
+    <div className="discharge-printable" lang={language || "en"}>
+      <header className="discharge-paper-header">
+        <div>
+          <span className="discharge-paper-kicker">CARETRACE · CARE COORDINATION</span>
+          <h2>Patient #{patientNbr}</h2>
+          <p>Prepared {demoDate || "Date not supplied"}</p>
+        </div>
+        <span className={content?.verified ? "discharge-verified-pill verified" : "discharge-verified-pill unverified"}>
+          {content?.verified ? "✓ Verified: every value filled from the record" : "⚠ Verification needed"}
+        </span>
+      </header>
+      <div className="discharge-paper-rule" />
+      <h3>{heading}</h3>
+      <ol className="discharge-paper-steps">
+        {steps.map((line, index) => <li key={index}><span>{index + 1}</span><p>{line}</p></li>)}
+      </ol>
+      {helpText && <aside className="discharge-paper-help"><strong>When to get help</strong><p>{helpText}</p></aside>}
+      <div className="discharge-paper-verification">{filled} of 3 record slots filled · {content?.verified ? "No unfilled placeholders remain." : "Some record values could not be filled."}</div>
+      <footer className="discharge-paper-footer">Decision support, reviewed by your care team.</footer>
+    </div>
+  );
+}
+\nexport default function Discharge({ role, onOpenPatient }) {
   const [list, setList] = useState(null);
   const [patientId, setPatientId] = useState(null);
   const [d, setD] = useState(null);
@@ -112,13 +149,13 @@ export default function Discharge({ role, onOpenPatient }) {
 
       <div className="discharge-main-column">
         {!d ? <Spinner label="Loading discharge record…" /> : view === "instructions" ? <>
-          <Card title="Discharge handout" right={<span className="discharge-card-context">PATIENT-FACING SUMMARY</span>}>
+          <Card title="Discharge handout" right={<button type="button" className="discharge-print-button" onClick={() => window.print()}>Print or save as PDF</button>}>
             <div className="discharge-handout-head"><div><div className="discharge-section-eyebrow">AFTER YOUR HOSPITAL STAY</div><h2>Care instructions</h2><p>Review the information below with the patient before discharge.</p></div><span className={"discharge-verified-pill " + (ins.verified ? "verified" : "unverified")}>{ins.verified ? "✓ Record-verified slots" : "⚠ Verification needed"}</span></div>
-            <pre className="discharge-handout-text">{ins.text}</pre>
+            <HandoutPaper patientNbr={d.patient_nbr} demoDate={d.demo_date} content={ins} language="en" />
             <div className="discharge-source-note"><span>ⓘ</span><div><b>{ins.source === "llm" ? "LLM phrasing · record-filled slots" : "Fixed template · no LLM key"}</b><p>The LLM only phrases placeholder text. Code fills {Object.keys(ins.slots_used).join(", ") || "—"} from the patient record; it does not write drug names, dates, doses or numbers. {ins.note}</p></div></div>
-            <div className="discharge-language-row"><div><b>Language</b><small>Choose a patient-facing language</small></div><select value={regionalLang} onChange={(e) => setRegionalLang(e.target.value)} className="discharge-language-select">{LANGUAGES.map((lang) => <option key={lang.value} value={lang.value}>{lang.label}</option>)}</select>
+            <div className="discharge-language-row"><div><b>Language</b><small>Choose a patient-facing language</small></div><div className="discharge-language-tabs">{LANGUAGES.map((lang) => <button type="button" key={lang.value} className={regionalLang === lang.value ? "active" : ""} onClick={() => setRegionalLang(lang.value)}>{lang.label}</button>)}</div>
               {regional && <span className={"discharge-verified-pill " + (regional.verified ? "verified" : "unverified")}>{regional.verified ? "✓ Verified" : "⚠ Unverified"}</span>}</div>
-            {regional && <><pre className="discharge-handout-text regional">{regional.text}</pre>{regional.needs_native_review && <div className="discharge-review-note">Native-speaker review is still pending for this language template.</div>}
+            {regional && <><HandoutPaper patientNbr={d.patient_nbr} demoDate={d.demo_date} content={regional} language={regionalLang} />{regional.needs_native_review && <div className="discharge-review-note">Regional text needs native-speaker review before clinical use.</div>}
               <details className="discharge-back-translation"><summary>View back-translation</summary><p>{regional.back_translation}</p><small>Readability aid only — not clinically verified. {regional.note}</small></details></>}
           </Card>
           {d.intervention && <Card title="Matched follow-up intervention" right={<AssumptionTag />}><div className="discharge-intervention"><div><b>{d.intervention.name}</b><p>Suggested window: day {d.intervention.window_start_day}–{d.intervention.window_end_day}</p></div><strong>{d.intervention.minutes}<small>min</small></strong></div></Card>}
