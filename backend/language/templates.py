@@ -45,14 +45,14 @@ def active_drugs(patient: dict) -> list[str]:
     return [d for d in drugs if d]
 
 
-def slot_values(patient: dict, intervention: dict | None, demo_date: date) -> dict:
+def slot_values(\n    patient: dict, intervention: dict | None, demo_date: date,\n    followup_date: date | None = None,\n) -> dict:
     """Compute every slot from the patient record. A value of None means
     'cannot be filled from the record' and will leave the placeholder
     behind -> verified=False."""
     drugs = active_drugs(patient)
     return {
         "DRUG_1": drugs[0] if drugs else None,
-        "FOLLOWUP_DATE": (demo_date + timedelta(days=2)).isoformat() if demo_date else None,
+        "FOLLOWUP_DATE": (\n            followup_date.isoformat() if followup_date else\n            (demo_date + timedelta(days=int(intervention["window_start_day"]))).isoformat()\n            if demo_date and intervention else\n            (demo_date + timedelta(days=2)).isoformat() if demo_date else None\n        ),
         "INTERVENTION": intervention["name"] if intervention else None,
     }
 
