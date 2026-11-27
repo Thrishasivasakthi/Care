@@ -158,7 +158,6 @@ export default function App() {
         </nav>
 
         <div className="topbar-actions">
-          <button className="demo-start-button" type="button" onClick={startDemo}>Start 2-minute demo</button>
           <button className="icon-button" type="button" aria-label="Search" title="Search (demo)">
             <Icon name="search" />
           </button>
@@ -178,6 +177,10 @@ export default function App() {
           </div>
         </div>
       </header>
+
+      <div className="demo-launch-row">
+        <button className="demo-start-button" type="button" onClick={startDemo}>Start 2-minute demo</button>
+      </div>
 
       <main className="page-content">
         <div className="page-intro">
