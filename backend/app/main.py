@@ -26,6 +26,7 @@ from backend.app.db import get_db, init_db
 from backend.app.models import AuditLog, Intervention, Patient, Plan, Prediction, Review, Task
 from backend.decision import optimizer as opt
 from backend.decision.catalog import ASSUMPTION_TAG, catalog_dicts, effect_label, mid_effect, seed_catalog
+from backend.decision.duel import DUEL_SEED
 from backend.language import slots as slots_mod
 from backend.language import templates as tmpl
 
@@ -222,8 +223,190 @@ def create_tasks_for_plan(db: Session, plan: Plan, role: str, actor: str) -> lis
 
 
 # --------------------------------------------------------------------- #
-# meta
+# duel (Step B): human vs risk-only vs CareTrace, 15 fixed patients
 # --------------------------------------------------------------------- #
+
+@app.get("/duel/session")
+def duel_session(db: Session = Depends(get_db)) -> dict:
+    """15 fixed patients (seeded). Risk is NOT sent — hidden until scoring."""
+    from backend.decision.duel import pick_session
+    from backend.decision.replay import load_test_rows
+
+    rows = load_test_rows()
+    session = pick_session(rows, get_catalog(db))
+    ages = {
+        p.patient_nbr: p.age
+        for p in db.scalars(
+            select(Patient).where(
+                Patient.patient_nbr.in_([s["patient_nbr"] for s in session])
+            )
+        ).all()
+    }
+    public = []
+    for s in session:
+        public.append({
+            "patient_nbr": s["patient_nbr"],
+            "age": ages.get(s["patient_nbr"], "?"),
+            "top_drivers": s["top_drivers"],
+            "action": s["action"],
+            "minutes": s["minutes"],
+        })
+    return {
+        "patients": public,
+        "default_hours": 4,
+        "seed": DUEL_SEED,
+        "note": "risk hidden until Reveal; expected avoided uses assumed effects",
+    }
+
+
+@app.post("/duel/score")
+def duel_score(body: S.DuelScoreIn, db: Session = Depends(get_db)) -> dict:
+    """Score human picks vs risk-only vs CareTrace on the same set/budget."""
+    from backend.decision.duel import pick_session, score
+    from backend.decision.replay import load_test_rows
+
+    rows = load_test_rows()
+    session = pick_session(rows, get_catalog(db))
+    budget = int(max(1.0, min(8.0, body.hours)) * 60)
+    result = score(session, body.picked_patient_nbrs, budget)
+
+    # did the human win on either metric?
+    h = result["strategies"]["human"]
+    others = {k: v for k, v in result["strategies"].items() if k != "human"}
+    wins = [
+        m for m in ("readmissions_reached", "expected_avoided_readmissions")
+        if all(h[m] > v[m] for v in others.values())
+    ]
+    result["human_wins"] = wins
+    if wins:
+        metric_label = (
+            "real readmissions reached" if "readmissions_reached" in wins
+            else "expected avoided readmissions"
+        )
+        result["sentence"] = (
+            f"You beat both strategies on {metric_label}. CareTrace's list is "
+            "still the one that is fully actionable and clinician-reviewed — "
+            "compare the trade-off below rather than a single number."
+        )
+    else:
+        best = max(others, key=lambda k: others[k]["expected_avoided_readmissions"])
+        result["sentence"] = (
+            f"You did not beat {best.replace('_', ' ')} on either metric this "
+            "round. Note every CareTrace pick has a modifiable driver and a "
+            "matched intervention — a top-down risk list may include patients "
+            "nobody can act on."
+        )
+    return result
+
+
+# --------------------------------------------------------------------- #
+# check-in agent (Step D): simulated post-discharge chat
+# --------------------------------------------------------------------- #
+
+@app.post("/checkin/{patient_id}/message")
+def checkin_message(patient_id: int, body: S.CheckinIn, request: Request,
+                    db: Session = Depends(get_db)) -> dict:
+    from backend.app.models import Escalation
+    from backend.language import checkin
+
+    p = get_or_404(db, Patient, patient_id)
+    record = {"patient_nbr": p.patient_nbr, "active_drugs": p.active_drugs or [],
+              "num_medications": p.num_medications}
+    role, actor = role_of(request), actor_of(request, role_of(request))
+    result = checkin.handle(patient_id, body.message, record, actor=actor)
+
+    created = None
+    if result["escalate"]:
+        # link to this patient's first open task (approval escalates it)
+        task = db.scalar(
+            select(Task).where(Task.patient_id == p.id, Task.status == "Due")
+            .order_by(Task.due_date, Task.id)
+        )
+        esc = Escalation(
+            patient_id=p.id, patient_nbr=p.patient_nbr,
+            barrier=result["barrier"], message=body.message, reply=result["reply"],
+            task_id=task.id if task else None,
+        )
+        db.add(esc)
+        db.flush()
+        write_audit(db, role="system", actor="checkin-agent", patient_id=p.id,
+                    entity="escalation", entity_id=esc.id, field="status",
+                    old_value=None, new_value="Pending",
+                    note=f"barrier={result['barrier']}")
+        db.commit()
+        db.refresh(esc)
+        created = {"id": esc.id, "status": esc.status, "task_id": esc.task_id}
+        result["escalation_id"] = esc.id
+
+    return {**result, "escalation": created}
+
+
+# --------------------------------------------------------------------- #
+# escalations (Step D): Pending queue, clinician-only decisions
+# --------------------------------------------------------------------- #
+
+@app.get("/escalations")
+def list_escalations(db: Session = Depends(get_db)) -> dict:
+    from backend.app.models import Escalation
+
+    rows = list(db.scalars(
+        select(Escalation).order_by(desc(Escalation.created_at), desc(Escalation.id))
+    ).all())
+    return {
+        "escalations": [
+            {"id": e.id, "patient_id": e.patient_id, "patient_nbr": e.patient_nbr,
+             "barrier": e.barrier, "message": e.message, "status": e.status,
+             "reply": e.reply, "created_at": e.created_at,
+             "updated_by_role": e.updated_by_role}
+            for e in rows
+        ],
+        "count": len(rows),
+    }
+
+
+@app.post("/escalation/{escalation_id}/decision")
+def escalation_decision(escalation_id: int, body: S.EscalationDecisionIn,
+                        request: Request, db: Session = Depends(get_db)) -> dict:
+    from backend.app.models import Escalation
+
+    role, actor = require_clinician(request)          # coordinator -> 403
+    esc = get_or_404(db, Escalation, escalation_id)
+    old = esc.status
+    new = "Approved" if body.action == "approve" else "Rejected"
+    esc.status = new
+    esc.updated_by_role = role
+
+    write_audit(db, role=role, actor=actor, patient_id=esc.patient_id,
+                entity="escalation", entity_id=esc.id, field="status",
+                old_value=old, new_value=new, note=body.note)
+    task_changed = None
+    if new == "Approved" and esc.task_id:
+        task = db.get(Task, esc.task_id)
+        if task is not None and task.status != "Escalated":
+            old_t = task.status
+            task.status = "Escalated"
+            write_audit(db, role=role, actor=actor, patient_id=task.patient_id,
+                        entity="task", entity_id=task.id, field="status",
+                        old_value=old_t, new_value="Escalated",
+                        note=f"escalation {esc.id} approved")
+            task_changed = task.id
+    db.commit()
+    return {"escalation": {"id": esc.id, "status": esc.status},
+            "task_escalated": task_changed}
+
+
+# --------------------------------------------------------------------- #
+# reset demo (Step F)
+# --------------------------------------------------------------------- #
+
+@app.post("/demo/reset")
+def demo_reset() -> dict:
+    """Restore the seeded demo state (plans, tasks, audit, escalations)."""
+    import importlib
+    import backend.seed as seed_mod
+    importlib.reload(seed_mod)
+    seed_mod.main()
+    return {"ok": True, "message": "demo state restored"}
 
 @app.get("/meta", response_model=S.MetaOut)
 def meta():
@@ -709,6 +892,11 @@ def ops(db: Session = Depends(get_db)):
     except Exception:
         replay = None
 
+    try:
+        fairness = json.loads((ARTIFACTS / "fairness.json").read_text())
+    except Exception:
+        fairness = None
+
     by_dept: dict[str, list[int]] = {}
     by_group: dict[str, list[int]] = {}
     stays: list[int] = []
@@ -753,6 +941,7 @@ def ops(db: Session = Depends(get_db)):
             "expected avoided readmissions (assumed effects) x average stay "
             "in this dataset - assumption, not a prediction"
         ),
+        "fairness": fairness,
         "system_rule": SYSTEM_RULE,
         "honesty": HONESTY,
     }
@@ -763,7 +952,8 @@ def ops(db: Session = Depends(get_db)):
 # --------------------------------------------------------------------- #
 
 @app.get("/discharge/{patient_id}", response_model=S.DischargeOut)
-def discharge(patient_id: int, db: Session = Depends(get_db)):
+def discharge(patient_id: int, db: Session = Depends(get_db),
+              lang: str | None = Query(default=None)):
     p = get_or_404(db, Patient, patient_id)
     pr = db.scalar(select(Prediction).where(Prediction.patient_id == p.id))
     catalog = get_catalog(db)
@@ -783,6 +973,10 @@ def discharge(patient_id: int, db: Session = Depends(get_db)):
         patient_record(p, pr), intervention, DEMO_DATE
     )
 
+    regional = tmpl.render_regional_instructions(
+        patient_record(p, pr), intervention, DEMO_DATE, lang
+    )
+
     tasks = list(db.scalars(
         select(Task).where(Task.patient_id == p.id).order_by(Task.due_date)
     ).all())
@@ -794,6 +988,7 @@ def discharge(patient_id: int, db: Session = Depends(get_db)):
         "patient_id": p.id,
         "patient_nbr": p.patient_nbr,
         "instructions": instructions,
+        "regional_instructions": regional,
         "intervention": intervention,
         "tasks": [task_dict(t) for t in tasks],
         "reminders": reminders,

@@ -201,6 +201,7 @@ class OpsOut(BaseModel):
     avg_stay_days: float
     bed_days_freed: float | None
     bed_days_note: str
+    fairness: dict[str, Any] | None = None
     system_rule: str
     honesty: list[str]
 
@@ -209,6 +210,7 @@ class DischargeOut(BaseModel):
     patient_id: int
     patient_nbr: int
     instructions: dict[str, Any]          # {text, source, verified, missing_slots, slots}
+    regional_instructions: dict[str, Any] | None = None
     intervention: dict[str, Any] | None
     tasks: list[TaskOut]
     reminders: list[str]                  # simulated, nothing sent
@@ -222,3 +224,25 @@ class MetaOut(BaseModel):
     llm_configured: bool
     llm_provider: str
     roles: list[str]
+
+
+# --------------------------------------------------------------------- #
+# Step B: duel
+# --------------------------------------------------------------------- #
+
+class DuelScoreIn(BaseModel):
+    hours: float = Field(default=4, ge=1, le=8)
+    picked_patient_nbrs: list[int]
+
+
+# --------------------------------------------------------------------- #
+# Step D: check-in agent + escalations
+# --------------------------------------------------------------------- #
+
+class CheckinIn(BaseModel):
+    message: str = Field(min_length=1, max_length=2000)
+
+
+class EscalationDecisionIn(BaseModel):
+    action: Literal["approve", "reject"]
+    note: str | None = None

@@ -256,8 +256,58 @@ def test_simulated_reminders_are_text_only():
 
 
 # --------------------------------------------------------------------- #
-# optimizer rules
+# Step B: duel budget enforcement
 # --------------------------------------------------------------------- #
+def test_duel_budget_enforcement():
+    import numpy as np
+    from backend.decision import duel, optimizer
+    from backend.decision.catalog import catalog_dicts, mid_effect
+    from backend.decision.replay import load_test_rows
+
+    rows = load_test_rows()
+    catalog = catalog_dicts()
+    session = duel.pick_session(rows, catalog)
+    assert len(session) == 15
+    # score with a budget too small for everything: selected minutes <= budget
+    budget = 30
+    res = duel.score(session, [s["patient_nbr"] for s in session], budget)
+    for strat in ("human", "risk_only", "caretrace"):
+        assert res["strategies"][strat]["minutes_used"] <= budget
+    # an over-budget human pick is dropped (not counted)
+    big = max(session, key=lambda s: s["minutes"])
+    res2 = duel.score(session, [big["patient_nbr"]], 1)  # budget 1 min
+    assert res2["strategies"]["human"]["calls_made"] == 0
+
+
+# --------------------------------------------------------------------- #
+# Step C: fairness hides small groups
+# --------------------------------------------------------------------- #
+def test_fairness_hides_small_groups():
+    import json
+    from pathlib import Path
+    f = json.loads((Path("artifacts") / "fairness.json").read_text())
+    assert "dimensions" in f
+    for dim, rows in f["dimensions"].items():
+        for r in rows:
+            if r["n"] < f["min_group_n"]:
+                assert r["too_small"] is True
+                assert r["roc_auc"] is None
+                assert r["top20_capture"] is None
+
+
+# --------------------------------------------------------------------- #
+# Step E: language fallback when a slot is missing
+# --------------------------------------------------------------------- #
+def test_language_fallback_when_slot_missing():
+    from backend.language import templates as tmpl
+    out = tmpl.render_regional_instructions(
+        {"active_drugs": [], "patient_nbr": 1}, None, __import__("datetime").date(2026, 1, 1),
+        lang="hi",
+    )
+    assert out["verified"] is False
+    assert "INTERVENTION" in out["missing_slots"] or "DRUG_1" in out["missing_slots"]
+    assert out["back_translation"]  # still returned
+    assert out["needs_native_review"] is True
 def test_eligibility_requires_modifiable_positive_shap():
     shap = {"Discharge setting": 0.5, "Demographics": 0.9, "Prior use": -0.2}
     eligible = opt.eligible_actions(shap, [dict(iv) for iv in INTERVENTIONS])
@@ -280,3 +330,52 @@ def test_priority_formula():
     exp2 = risk * mid_effect(ba_iv) * opt.shap_share(shap, ba_iv["target_concept"]) / ba_iv["minutes"]
     assert got["priority"] == pytest.approx(exp2)
     assert expected > 0
+
+
+def test_knapsack_maximizes_the_scored_objective():
+    """The knapsack value must be exactly what the replay's metric 2 tracks:
+    value = calibrated_risk * mid_effect (expected avoided readmissions).
+    shap_share must NOT discount the value (it double-discounts multi-driver
+    patients and pushed CareTrace below raw risk on metric 2)."""
+    rng = np.random.default_rng(11)
+    items = []
+    for _ in range(40):
+        risk = float(rng.uniform(0.05, 0.4))
+        # simulate two patients: one with a single big driver, one with several
+        # small drivers (lower shap_share) but the SAME risk and action value
+        shap = {
+            "Discharge setting": float(rng.uniform(0.05, 0.5)),
+            "Medication complexity": float(rng.uniform(0.05, 0.5)),
+            "Follow-up access": float(rng.uniform(0.05, 0.5)),
+        }
+        ba = opt.best_action(risk, shap, [dict(iv) for iv in INTERVENTIONS])
+        assert ba is not None
+        # objective consistency: value == risk * mid_effect of the chosen action
+        assert ba["value"] == pytest.approx(
+            risk * mid_effect(ba["action"]), rel=1e-12
+        )
+        # value is independent of shap_share: doubling all SHAP values leaves
+        # the value unchanged (only priority/share change)
+        shap2 = {k: v * 4 for k, v in shap.items()}
+        ba2 = opt.best_action(risk, shap2, [dict(iv) for iv in INTERVENTIONS])
+        assert ba2["value"] == pytest.approx(ba["value"], rel=1e-12)
+        items.append({
+            "minutes": int(ba["action"]["minutes"]),
+            "value": ba["value"],
+            "risk": risk,
+        })
+    # knapsack must beat any random feasible subset on the summed objective
+    budget = 240
+    sel = opt.knapsack(items, budget)
+    assert sum(items[i]["minutes"] for i in sel) <= budget
+    best_greedy_risk = 0.0
+    for order in (sorted(range(len(items)), key=lambda i: -items[i]["risk"]),
+                  list(range(len(items)))):
+        used, v = 0, 0.0
+        for i in order:
+            if used + items[i]["minutes"] <= budget:
+                used += items[i]["minutes"]
+                v += items[i]["value"]
+        best_greedy_risk = max(best_greedy_risk, v)
+    knap_v = sum(items[i]["value"] for i in sel)
+    assert knap_v >= best_greedy_risk - 1e-9   # knapsack >= risk-only greedy

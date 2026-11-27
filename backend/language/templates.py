@@ -20,6 +20,7 @@ from datetime import date, timedelta
 
 from backend.decision import catalog as cat
 from backend.ml import features as F
+from backend.language import regional as reg
 
 ALLOWED_SLOTS = ("DRUG_1", "FOLLOWUP_DATE", "INTERVENTION")
 
@@ -192,6 +193,35 @@ def render_discharge_instructions(
             else "Fixed template (no LLM key or LLM output rejected); every "
                  "value filled from the patient record by code."
         ),
+    }
+
+
+# --------------------------------------------------------------------- #
+# regional (Step E): same slot contract, different template
+# --------------------------------------------------------------------- #
+
+def render_regional_instructions(
+    patient: dict, intervention: dict | None, demo_date: date, lang: str | None = None
+) -> dict:
+    lang = lang or reg.configured_lang()
+    slots = slot_values(patient, intervention, demo_date)
+    text = reg.regional_template(lang)
+    filled, missing = fill(text, slots)
+    verified = not missing and "{" not in filled
+    bt_raw = reg.BACK_TRANSLATION.get(lang, "")
+    bt_filled, _ = fill(bt_raw, slots)
+    return {
+        "text": filled,
+        "source": "regional-template",
+        "verified": verified,
+        "missing_slots": missing,
+        "slots_used": {k: v for k, v in slots.items() if v is not None},
+        "language": lang,
+        "back_translation": bt_filled,
+        "needs_native_review": reg.needs_review(),
+        "note": ("Fixed regional-language template (slot-based, code-filled). "
+                 "Read the English back-translation; the regional text is "
+                 "pending native-speaker review."),
     }
 
 

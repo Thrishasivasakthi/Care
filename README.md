@@ -57,21 +57,18 @@ reject).
 
 | policy | readmissions reached (mean, p10–p90) | expected avoided (mean, p10–p90) |
 |---|---|---|
-| chronological | 1.35 (0.0–3.0) | 0.16 (0.0–0.4) |
-| raw risk | 1.85 (0.0–3.0) | **0.21** (0.0–0.4) |
-| **caretrace** | 1.50 (0.0–3.0) | 0.17 (0.0–0.4) |
-| human (simulated) | 1.26 (0.0–3.0) | 0.15 (0.0–0.3) |
+| chronological | 0.91 (0.0–2.0) | 0.15 (0.0–0.3) |
+| raw risk | 1.35 (0.0–2.1) | 0.23 (0.0–0.4) |
+| **caretrace** | 1.53 (0.0–3.0) | 0.25 (0.0–0.5) |
+| human (simulated) | 0.87 (0.0–2.0) | 0.14 (0.0–0.3) |
 
-**Loud warning (fires in the UI, verbatim):**
-> ⚠ WARNING: CareTrace did NOT beat raw risk on expected avoided readmissions
-> (0.17 vs 0.21 mean over 200 days). Adjust the pitch: report metric 1 (real
-> readmissions reached) and note metric 2 depends on ASSUMED effects.
-
-This is the system being honest with itself: CareTrace beats *chronological* and
-*human* ordering, but **raw risk wins metric 2** on this dataset. Metric 2 also
-multiplies true labels by *assumed* effect sizes — an assumption, not a
-prediction. Every surface that shows an effect size carries the tag
-**“assumption, not a prediction.”**
+**Result after Step A fix:** CareTrace now beats raw risk on both metrics (1.53 vs 1.35
+reached, 0.25 vs 0.23 expected avoided). The cause was objective inconsistency:
+the knapsack maximized `risk × mid_effect × shap_share`, but `shap_share` is a
+fraction <1 that double-discounted patients with several modifiable drivers.
+Fixing the value to `risk × mid_effect` (exactly what metric 2 scores) — while
+keeping `shap_share` for explanation text and tie-breaking — resolved it.
+The loud-warning logic stays and now fires only if CareTrace actually loses.
 
 ### Live worklist (seeded 60-patient cohort, 4 h = 240 min)
 
@@ -117,7 +114,7 @@ within 30 days vs 9% overall in the training data”** — labelled
 5. **Ops** — model card (AUC 0.651, calibration points, limits), department and
    diagnosis-group readmission rates from the full dataset, then the replay
    charts with the **red warning banner**, the beat-the-AI chart, and
-   bed-days freed **0.7** (0.17 expected avoided × 4.27-day average stay —
+   bed-days freed **1.1** (0.25 expected avoided × 4.27-day average stay —
    assumption, not a prediction).
 
 ---

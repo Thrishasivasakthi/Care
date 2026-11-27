@@ -70,6 +70,62 @@ def calibration_points(y: np.ndarray, risk: np.ndarray, n_bins: int = N_CALIBRAT
     return points
 
 
+MIN_GROUP_N = 100          # Step C: hide metrics for groups smaller than this
+
+
+def _top20_capture(y: np.ndarray, risk: np.ndarray) -> float:
+    n = len(risk)
+    if n == 0 or y.sum() == 0:
+        return float("nan")
+    k = max(1, math.ceil(TOP_FRACTION * n))
+    order = np.argsort(-risk, kind="stable")
+    return float(y[order[:k]].sum() / y.sum())
+
+
+def compute_fairness(df, test_patients, risk, y, cutoff) -> dict:
+    """Descriptive metrics by age band / gender / race on the TEST split.
+    Tiny groups are merged into 'Other'; n < MIN_GROUP_N is marked too_small
+    (UI hides the numbers). Not a causal fairness claim."""
+    from sklearn.metrics import roc_auc_score
+
+    meta = df.set_index("patient_nbr").loc[test_patients]
+    frame = meta[["age", "gender", "race"]].copy()
+    frame["risk"] = risk
+    frame["y"] = y
+    frame["flag"] = (risk >= cutoff).astype(int)
+
+    out: dict = {"min_group_n": MIN_GROUP_N, "dimensions": {}, "note": (
+        "Differences are descriptive, not a causal fairness claim. "
+        "Computed on the held-out test split only.")}
+
+    for dim in ("age", "gender", "race"):
+        counts = frame[dim].value_counts()
+        # merge groups smaller than MIN_GROUP_N (except keep each age band:
+        # bands are pre-bucketed and all large; race/gender get "Other")
+        small = set(counts[counts < MIN_GROUP_N].index)
+        labels = frame[dim].where(~frame[dim].isin(small), "Other")
+        rows = []
+        for name, grp in frame.groupby(labels):
+            n = int(len(grp))
+            g_y = grp["y"].to_numpy()
+            g_risk = grp["risk"].to_numpy()
+            too_small = n < MIN_GROUP_N
+            auc = (float(roc_auc_score(g_y, g_risk))
+                   if n >= MIN_GROUP_N and 0 < g_y.sum() < n else None)
+            rows.append({
+                "group": str(name),
+                "n": n,
+                "too_small": too_small,
+                "roc_auc": auc,
+                "base_rate": float(g_y.mean()),
+                "flag_rate": float(grp["flag"].mean()),
+                "top20_capture": (None if too_small else _top20_capture(g_y, g_risk)),
+            })
+        rows.sort(key=lambda r: (-r["n"], r["group"]))
+        out["dimensions"][dim] = rows
+    return out
+
+
 def main() -> None:
     ARTIFACTS.mkdir(exist_ok=True)
 
@@ -197,6 +253,13 @@ def main() -> None:
         ],
     }
     (ARTIFACTS / "metrics.json").write_text(json.dumps(metrics, indent=2))
+
+    # ------------------------------------------------------------------ #
+    # Step C: fairness by age band / gender / race (descriptive only)
+    # ------------------------------------------------------------------ #
+    print("Computing fairness breakdown ...")
+    fairness = compute_fairness(df, test_patients, risk, y_test, cutoff)
+    (ARTIFACTS / "fairness.json").write_text(json.dumps(fairness, indent=2))
 
     print()
     print("=" * 52)

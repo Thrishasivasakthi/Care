@@ -79,12 +79,27 @@ function PolicyChart({ replay, metricKey, title, colorFor }) {
 export default function Ops() {
   const [ops, setOps] = useState(null);
   const [error, setError] = useState(null);
+  const [resetting, setResetting] = useState(false);
 
   useEffect(() => {
     api("/ops")
       .then(setOps)
       .catch((e) => setError(e.message));
   }, []);
+
+  const resetDemo = async () => {
+    if (!confirm("Reset the demo to seeded state?")) return;
+    setResetting(true);
+    try {
+      await api("/demo/reset", { method: "POST" });
+      const o = await api("/ops");
+      setOps(o);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setResetting(false);
+    }
+  };
 
   if (error) return <ErrorBox message={error} />;
   if (!ops) return <Spinner label="Loading ops…" />;
@@ -102,10 +117,19 @@ export default function Ops() {
       <Card
         title="Model card (held-out test split)"
         right={
-          <span className="text-xs text-slate-500">
-            {m.dataset?.patients?.toLocaleString()} patients ·{" "}
-            {m.n_features} features · seed {m.seed}
-          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={resetDemo}
+              disabled={resetting}
+              className="text-xs border border-slate-300 rounded px-2 py-1 hover:bg-slate-50 disabled:opacity-40"
+            >
+              {resetting ? "resetting…" : "Reset demo"}
+            </button>
+            <span className="text-xs text-slate-500">
+              {m.dataset?.patients?.toLocaleString()} patients ·{" "}
+              {m.n_features} features · seed {m.seed}
+            </span>
+          </div>
         }
       >
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -247,7 +271,59 @@ export default function Ops() {
         )}
       </Card>
 
-      {/* ------------------------------------------------ bed days + honesty */}
+      {/* ------------------------------------------------ fairness */}
+      {/* ------------------------------------------------ fairness */}
+      {ops.fairness && (
+        <Card title="Fairness panel (descriptive, test split)">
+          <p className="text-xs text-slate-500 mb-3">
+            AUC, base rate, flag rate and top-20% capture by group. Groups with
+            n &lt; {ops.fairness.min_group_n} are marked "too small". Differences
+            are descriptive, not a causal fairness claim.
+          </p>
+          {Object.entries(ops.fairness.dimensions).map(([dim, rows]) => (
+            <div key={dim} className="mb-5">
+              <div className="text-sm font-semibold text-slate-700 mb-2 capitalize">
+                {dim}
+              </div>
+              <div className="overflow-x-auto">
+                <table className="compact w-full text-xs">
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase text-slate-500 border-b border-slate-200">
+                      <th className="py-1">group</th>
+                      <th className="text-right">n</th>
+                      <th className="text-right">base rate</th>
+                      <th className="text-right">flag rate</th>
+                      <th className="text-right">AUC</th>
+                      <th className="text-right">top-20% capture</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r) => (
+                      <tr key={r.group} className="border-b border-slate-100">
+                        <td className="py-1">{r.group}</td>
+                        <td className="text-right">{r.n}</td>
+                        <td className="text-right">{(r.base_rate * 100).toFixed(1)}%</td>
+                        <td className="text-right">{(r.flag_rate * 100).toFixed(1)}%</td>
+                        <td className="text-right">
+                          {r.too_small || r.roc_auc === null
+                            ? "too small"
+                            : r.roc_auc.toFixed(3)}
+                        </td>
+                        <td className="text-right">
+                          {r.too_small || r.top20_capture === null
+                            ? "too small"
+                            : `${(r.top20_capture * 100).toFixed(1)}%`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))}
+        </Card>
+      )}
+
       <div className="grid lg:grid-cols-3 gap-4">
         <Card title="Bed-days freed">
           <div className="text-3xl font-semibold text-teal-800">

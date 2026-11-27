@@ -56,22 +56,36 @@ def top_modifiable_driver(concept_shap: dict) -> str | None:
 
 
 def best_action(risk: float, concept_shap: dict, catalog: list[dict]) -> dict | None:
-    """Highest priority eligible intervention for one patient, or None."""
+    """Highest priority eligible intervention for one patient, or None.
+
+    `value` is calibrated_risk * mid_effect — exactly the quantity the replay's
+    metric 2 scores (expected avoided readmissions). shap_share deliberately
+    does NOT enter `value`: it is a fraction < 1 that double-discounts patients
+    with several modifiable drivers and would push the knapsack away from the
+    objective the replay measures. shap_share is used for explanation text and
+    as a tie-break only.
+    """
     best = None
-    best_priority = -1.0
+    best_value = -1.0
+    best_share = -1.0
     for iv in eligible_actions(concept_shap, catalog):
         share = shap_share(concept_shap, iv["target_concept"])
-        priority = risk * mid_effect(iv) * share / iv["minutes"]
-        if priority > best_priority + EPS:          # deterministic tie-break
-            best_priority = priority
+        value = risk * mid_effect(iv)
+        # primary: expected avoided; tie-break: larger driver share (then name)
+        if value > best_value + EPS or (
+            abs(value - best_value) <= EPS and share > best_share + EPS
+        ):
+            best_value = value
+            best_share = share
             best = iv
     if best is None:
         return None
     share = shap_share(concept_shap, best["target_concept"])
+    minutes = best["minutes"]
     return {
         "action": dict(best),
-        "priority": best_priority,
-        "value": risk * mid_effect(best) * share,   # expected avoided (risk-weighted)
+        "priority": best_value * share / minutes,   # display priority (unchanged formula)
+        "value": best_value,                        # risk * mid_effect (knapsack objective)
         "shap_share": share,
         "driver": best["target_concept"],
     }

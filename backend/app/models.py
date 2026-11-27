@@ -132,6 +132,24 @@ class Review(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
 
 
+class Escalation(Base):
+    """Step D: barrier detected in a simulated check-in chat -> Pending
+    queue for clinician review. Created only by the check-in flow."""
+    __tablename__ = "escalations"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    patient_id: Mapped[int] = mapped_column(ForeignKey("patients.id"), index=True)
+    patient_nbr: Mapped[int] = mapped_column(Integer, index=True)
+    barrier: Mapped[str] = mapped_column(String(24))   # cost|transport|side_effect|missed_dose
+    message: Mapped[str] = mapped_column(Text)         # patient's words
+    reply: Mapped[str] = mapped_column(Text)           # what the agent said back
+    status: Mapped[str] = mapped_column(String(16), default="Pending", index=True)
+    task_id: Mapped[int | None] = mapped_column(ForeignKey("tasks.id"), nullable=True)
+    created_by: Mapped[str] = mapped_column(String(64), default="checkin-agent")
+    updated_by_role: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
 class AuditLog(Base):
     __tablename__ = "audit_log"
 

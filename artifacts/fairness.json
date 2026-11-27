@@ -1,0 +1,156 @@
+{
+  "min_group_n": 100,
+  "dimensions": {
+    "age": [
+      {
+        "group": "[70-80)",
+        "n": 3603,
+        "too_small": false,
+        "roc_auc": 0.6489700790197994,
+        "base_rate": 0.10685539827921177,
+        "flag_rate": 0.3694143769081321,
+        "top20_capture": 0.35324675324675325
+      },
+      {
+        "group": "[60-70)",
+        "n": 3092,
+        "too_small": false,
+        "roc_auc": 0.6397580009105424,
+        "base_rate": 0.08958602846054334,
+        "flag_rate": 0.23609314359637776,
+        "top20_capture": 0.34296028880866425
+      },
+      {
+        "group": "[50-60)",
+        "n": 2455,
+        "too_small": false,
+        "roc_auc": 0.6365463641236376,
+        "base_rate": 0.07861507128309572,
+        "flag_rate": 0.13034623217922606,
+        "top20_capture": 0.39896373056994816
+      },
+      {
+        "group": "[80-90)",
+        "n": 2228,
+        "too_small": false,
+        "roc_auc": 0.625159059360127,
+        "base_rate": 0.10951526032315978,
+        "flag_rate": 0.4272890484739677,
+        "top20_capture": 0.3483606557377049
+      },
+      {
+        "group": "[40-50)",
+        "n": 1380,
+        "too_small": false,
+        "roc_auc": 0.6790151306280339,
+        "base_rate": 0.06739130434782609,
+        "flag_rate": 0.15869565217391304,
+        "top20_capture": 0.40860215053763443
+      },
+      {
+        "group": "[30-40)",
+        "n": 513,
+        "too_small": false,
+        "roc_auc": 0.6470588235294118,
+        "base_rate": 0.06627680311890838,
+        "flag_rate": 0.13255360623781676,
+        "top20_capture": 0.3235294117647059
+      },
+      {
+        "group": "[90-100)",
+        "n": 363,
+        "too_small": false,
+        "roc_auc": 0.5683503931167483,
+        "base_rate": 0.11570247933884298,
+        "flag_rate": 0.1790633608815427,
+        "top20_capture": 0.3333333333333333
+      },
+      {
+        "group": "[20-30)",
+        "n": 236,
+        "too_small": false,
+        "roc_auc": 0.6825141015310233,
+        "base_rate": 0.07203389830508475,
+        "flag_rate": 0.09745762711864407,
+        "top20_capture": 0.47058823529411764
+      },
+      {
+        "group": "Other",
+        "n": 128,
+        "too_small": false,
+        "roc_auc": 0.7137978142076502,
+        "base_rate": 0.046875,
+        "flag_rate": 0.03125,
+        "top20_capture": 0.5
+      }
+    ],
+    "gender": [
+      {
+        "group": "Female",
+        "n": 7417,
+        "too_small": false,
+        "roc_auc": 0.6634615937652777,
+        "base_rate": 0.09033301874073076,
+        "flag_rate": 0.2681677227989753,
+        "top20_capture": 0.3805970149253731
+      },
+      {
+        "group": "Male",
+        "n": 6581,
+        "too_small": false,
+        "roc_auc": 0.6368703325443915,
+        "base_rate": 0.09436255888162894,
+        "flag_rate": 0.2618143139340526,
+        "top20_capture": 0.3494363929146538
+      }
+    ],
+    "race": [
+      {
+        "group": "Caucasian",
+        "n": 10518,
+        "too_small": false,
+        "roc_auc": 0.6482073044045487,
+        "base_rate": 0.0947898840083666,
+        "flag_rate": 0.2786651454649173,
+        "top20_capture": 0.35907723169508526
+      },
+      {
+        "group": "AfricanAmerican",
+        "n": 2469,
+        "too_small": false,
+        "roc_auc": 0.6604353557021061,
+        "base_rate": 0.0854597002835156,
+        "flag_rate": 0.25678412312677196,
+        "top20_capture": 0.3981042654028436
+      },
+      {
+        "group": "Hispanic",
+        "n": 287,
+        "too_small": false,
+        "roc_auc": 0.7128623188405797,
+        "base_rate": 0.08013937282229965,
+        "flag_rate": 0.18118466898954705,
+        "top20_capture": 0.5217391304347826
+      },
+      {
+        "group": "Other",
+        "n": 235,
+        "too_small": false,
+        "roc_auc": 0.606439704675964,
+        "base_rate": 0.09787234042553192,
+        "flag_rate": 0.08085106382978724,
+        "top20_capture": 0.21739130434782608
+      },
+      {
+        "group": "Asian",
+        "n": 105,
+        "too_small": false,
+        "roc_auc": 0.7280092592592593,
+        "base_rate": 0.08571428571428572,
+        "flag_rate": 0.1523809523809524,
+        "top20_capture": 0.5555555555555556
+      }
+    ]
+  },
+  "note": "Differences are descriptive, not a causal fairness claim. Computed on the held-out test split only."
+}

@@ -4,8 +4,9 @@ import Worklist from "./pages/Worklist.jsx";
 import Patient from "./pages/Patient.jsx";
 import Discharge from "./pages/Discharge.jsx";
 import Ops from "./pages/Ops.jsx";
+import Duel from "./pages/Duel.jsx";
 
-const TABS = ["Worklist", "Discharge", "Ops"];
+const TABS = ["Worklist", "Discharge", "Duel", "Ops"];
 
 export default function App() {
   const [role, setRoleState] = useState(getRole());
@@ -96,6 +97,7 @@ export default function App() {
         {tab === "Discharge" && (
           <Discharge role={role} onOpenPatient={openPatient} />
         )}
+        {tab === "Duel" && <Duel />}
         {tab === "Ops" && <Ops />}
       </main>
 
