@@ -21,9 +21,16 @@ export default function Worklist({ role, onOpenPatient }) {
   }, [hours, load]);
 
   return (
-    <div className="space-y-4">
+    <div className="page-stack">
+      <div className="banner">Decision support only. Expected avoided readmissions use assumed intervention effects; they are not predictions.</div>
       <ErrorBox message={error} />
 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="kpi"><div className="kpi-label">Unreviewed flags</div><div className="kpi-value">{data ? data.unreviewed_flags : "—"}</div></div>
+        <div className="kpi"><div className="kpi-label">Patients selected</div><div className="kpi-value">{data ? data.selection.length : "—"}</div></div>
+        <div className="kpi"><div className="kpi-label">Minutes used of budget</div><div className="kpi-value">{data ? (data.budget_minutes - data.remaining_minutes ?? "—") : "—"}</div></div>
+        <div className="kpi"><div className="kpi-label">Expected avoided readmissions</div><div className="kpi-value">{data ? data.selection.reduce((a,r)=>a+(r.expected_avoided_readmissions || 0),0).toFixed(2) : "—"}</div></div>
+      </div>
       <div className="flex flex-wrap items-center gap-4">
         <div className="bg-white border border-slate-200 rounded-lg px-4 py-3 flex items-center gap-3">
           <label className="text-sm font-medium text-slate-700" htmlFor="hours">
@@ -103,7 +110,7 @@ export default function Worklist({ role, onOpenPatient }) {
                     </div>
                   </dl>
                   <div className="mt-2 flex items-center gap-2">
-                    <AssumptionTag />
+                    
                     <span className="text-[11px] text-slate-500">
                       expected avoided {c.expected_avoided_readmissions.toFixed(3)}{" "}
                       (held-out labels × assumed effect)
@@ -129,7 +136,7 @@ export default function Worklist({ role, onOpenPatient }) {
             }
           >
             <div className="overflow-x-auto">
-              <table className="compact w-full text-sm">
+              <table className="table compact w-full text-sm">
                 <thead>
                   <tr className="text-left text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
                     <th className="py-2">#</th>
@@ -198,7 +205,7 @@ export default function Worklist({ role, onOpenPatient }) {
 
           {/* ---------------------------------------- below the line */}
           <Card
-            title={`Below the line — no modifiable driver (${data.no_modifiable_driver.length})`}
+            title={`Patients with no modifiable driver (${data.no_modifiable_driver.length})`}
           >
             <p className="text-xs text-slate-500 mb-2">
               These patients have no positive modifiable SHAP driver, so no
