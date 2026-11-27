@@ -65,3 +65,52 @@ export function ErrorBox({ message }) {
 export function Spinner({ label = "Loading…" }) {
   return <div className="rounded-xl border border-slate-200 bg-white text-sm text-slate-500 animate-pulse py-10 text-center">{label}</div>;
 }
+
+
+export function InfoBanner({ children, tone = "info" }) {
+  const tones = {
+    info: "border-sky-200 bg-sky-50 text-sky-900",
+    warning: "border-amber-200 bg-amber-50 text-amber-900",
+    success: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  };
+  return <div role="note" className={`rounded-lg border px-4 py-3 text-sm leading-relaxed ${tones[tone] || tones.info}`}>{children}</div>;
+}
+
+export function PageHeader({ title, description, action }) {
+  return <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
+    <div><h1 className="text-2xl font-bold tracking-tight text-slate-900">{title}</h1>
+      {description && <p className="mt-1 text-sm text-slate-600">{description}</p>}</div>
+    {action}
+  </div>;
+}
+
+export function KpiCard({ label, value, detail, tone = "default" }) {
+  const colors = { default: "text-slate-900", teal: "text-teal-800", amber: "text-amber-700", red: "text-rose-700" };
+  return <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm min-w-0">
+    <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
+    <div className={`mt-1 text-2xl font-bold tracking-tight ${colors[tone] || colors.default}`}>{value}</div>
+    {detail && <div className="mt-1 text-xs text-slate-500">{detail}</div>}
+  </div>;
+}
+
+export function RiskBar({ value, label = "Readmission risk" }) {
+  const n = Math.max(0, Math.min(1, Number(value) || 0));
+  const tone = n >= .3 ? "bg-rose-600" : n >= .15 ? "bg-amber-500" : "bg-emerald-600";
+  return <div className="min-w-20">
+    <div className="mb-1 flex justify-between gap-2 text-xs"><span className="text-slate-500">{label}</span><strong className="text-slate-800">{(n * 100).toFixed(1)}%</strong></div>
+    <div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${tone}`} style={{ width: `${n * 100}%` }} /></div>
+  </div>;
+}
+
+export function EmptyState({ title, description }) {
+  return <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-9 text-center">
+    <div className="text-sm font-semibold text-slate-800">{title}</div>
+    {description && <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">{description}</p>}
+  </div>;
+}
+
+export function Skeleton({ lines = 3 }) {
+  return <div aria-label="Loading" className="animate-pulse space-y-3 rounded-xl border border-slate-200 bg-white p-5">
+    {Array.from({ length: lines }, (_, i) => <div key={i} className={`h-3 rounded bg-slate-100 ${i === 0 ? "w-1/3" : i === lines - 1 ? "w-2/3" : "w-full"}`} />)}
+  </div>;
+}

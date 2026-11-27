@@ -5,6 +5,7 @@ import Patient from "./pages/Patient.jsx";
 import Discharge from "./pages/Discharge.jsx";
 import Ops from "./pages/Ops.jsx";
 import Duel from "./pages/Duel.jsx";
+import { InfoBanner } from "./components/bits.jsx";
 
 const TABS = [
   { id: "Worklist", label: "Care worklist", short: "Worklist", hint: "Prioritised patient queue", mark: "01", icon: "inbox" },
@@ -123,6 +124,8 @@ export default function App() {
               <p>{tab === "Patient" ? "Review patient context, care recommendations and clinician decisions." : active?.hint}</p>
             </div>
           </div>
+
+          <div className="mb-4"><InfoBanner tone="warning">Intervention effect sizes and avoided-readmission estimates are assumptions for this demo, not clinical predictions or evidence of causal impact. Use the model output as decision support only; clinician review remains required.</InfoBanner></div>
 
           {tab === "Worklist" && <Worklist role={role} onOpenPatient={openPatient} />}
           {tab === "Patient" && <Patient patientId={patientId} role={role} onBack={() => goTab("Worklist")} />}
