@@ -1,6 +1,43 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { api, pct } from "../api.js";
-import { Card, Delta, ErrorBox, Spinner, StatusChip, AssumptionTag } from "../components/bits.jsx";
+import { Card, ErrorBox, Spinner, StatusChip } from "../components/bits.jsx";
+
+function DeltaPill({ value, suffix = "" }) {
+  const positive = Number(value) > 0;
+  const negative = Number(value) < 0;
+  return (
+    <span className={`delta-pill ${positive ? "positive" : negative ? "negative" : "neutral"}`}>
+      <span aria-hidden="true">{positive ? "↑" : negative ? "↓" : "—"}</span>
+      {positive || negative ? Math.abs(Number(value)).toFixed(1) : "0"}{suffix}
+    </span>
+  );
+}
+
+function RiskMeter({ value }) {
+  const n = Math.max(0, Math.min(1, Number(value) || 0));
+  const color = n >= .3 ? "#DC2626" : n >= .15 ? "#D97706" : "#16A34A";
+  return <div className="work-risk">
+    <span className="work-risk-track"><span style={{ width: `${n * 100}%`, background: color }} /></span>
+    <strong>{pct(n, 1)}</strong>
+  </div>;
+}
+
+function ComparisonBar({ label, care, risk, format = (n) => String(n) }) {
+  const max = Math.max(Number(care) || 0, Number(risk) || 0, .0001);
+  return <div className="comparison-row">
+    <div className="comparison-label">{label}</div>
+    <div className="comparison-track-group">
+      <div className="comparison-track care"><span style={{ width: `${Math.max(0, Number(care) || 0) / max * 100}%` }} /></div>
+      <div className="comparison-track risk"><span style={{ width: `${Math.max(0, Number(risk) || 0) / max * 100}%` }} /></div>
+    </div>
+    <div className="comparison-values"><strong>{format(care)}</strong><span>{format(risk)}</span></div>
+  </div>;
+}
+
+function policyValue(comparison, name, field) {
+  const row = comparison.find((item) => /caretrace/i.test(item.policy) === (name === "caretrace"));
+  return Number(row?.[field]) || 0;
+}
 
 export default function Worklist({ role, onOpenPatient }) {
   const [hours, setHours] = useState(4);
@@ -20,204 +57,134 @@ export default function Worklist({ role, onOpenPatient }) {
     load(hours);
   }, [hours, load]);
 
+  const metrics = useMemo(() => {
+    if (!data) return null;
+    const comparison = data.comparison || [];
+    const careCalls = policyValue(comparison, "caretrace", "calls_made");
+    const riskCalls = policyValue(comparison, "risk-only", "calls_made");
+    const careReached = policyValue(comparison, "caretrace", "readmissions_reached");
+    const riskReached = policyValue(comparison, "risk-only", "readmissions_reached");
+    const careAvoided = policyValue(comparison, "caretrace", "expected_avoided_readmissions");
+    const riskAvoided = policyValue(comparison, "risk-only", "expected_avoided_readmissions");
+    const used = (data.selection || []).reduce((sum, row) => sum + (Number(row.minutes) || 0), 0);
+    const lift = riskAvoided > 0 ? ((careAvoided - riskAvoided) / riskAvoided) * 100 : null;
+    return { careCalls, riskCalls, careReached, riskReached, careAvoided, riskAvoided, used, lift };
+  }, [data]);
+
   return (
-    <div className="space-y-4">
+    <div className="worklist-page">
       <ErrorBox message={error} />
-
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg px-4 py-3 flex items-center gap-3">
-          <label className="text-sm font-medium text-slate-700" htmlFor="hours">
-            Coordinator hours today
-          </label>
-          <input
-            id="hours"
-            type="range"
-            min="1"
-            max="8"
-            step="1"
-            value={hours}
-            onChange={(e) => setHours(Number(e.target.value))}
-            className="w-40 accent-teal-700"
-          />
-          <span className="text-sm font-semibold text-teal-800 w-16">
-            {hours} h ({hours * 60} min)
-          </span>
-        </div>
-
-        <div className="bg-white border border-slate-200 rounded-lg px-4 py-3 text-sm">
-          <span className="text-slate-500">Unreviewed flags</span>{" "}
-          <span
-            className={`ml-1 font-semibold ${
-              data?.unreviewed_flags ? "text-amber-700" : "text-slate-400"
-            }`}
-          >
-            {data ? data.unreviewed_flags : "—"}
-          </span>
-        </div>
-
-        <div className="text-xs text-slate-500">
-          {data ? (
-            <>
-              cohort {data.cohort_size} · budget {data.budget_minutes} min ·{" "}
-              {data.elapsed_ms} ms
-            </>
-          ) : (
-            "…"
-          )}
-        </div>
-      </div>
 
       {!data ? <Spinner label="Loading worklist…" /> : (
         <>
-          {/* ---------------------------------------- why not just call the sickest */}
-          <Card title="Why not just call the sickest?">
-            <div className="grid md:grid-cols-2 gap-4">
-              {data.comparison.map((c) => (
-                <div
-                  key={c.policy}
-                  className={`rounded-lg border p-3 ${
-                    c.policy.startsWith("CareTrace")
-                      ? "border-teal-300 bg-teal-50/50"
-                      : "border-slate-200"
-                  }`}
-                >
-                  <div className="text-sm font-semibold mb-2">{c.policy}</div>
-                  <dl className="grid grid-cols-3 gap-2 text-center">
-                    <div>
-                      <dt className="text-[11px] text-slate-500">calls made</dt>
-                      <dd className="text-lg font-semibold">{c.calls_made}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11px] text-slate-500">
-                        readmissions reached
-                      </dt>
-                      <dd className="text-lg font-semibold">
-                        {c.readmissions_reached}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[11px] text-slate-500">avoided / hour</dt>
-                      <dd className="text-lg font-semibold">
-                        {c.expected_avoided_per_hour.toFixed(3)}
-                      </dd>
-                    </div>
-                  </dl>
-                  <div className="mt-2 flex items-center gap-2">
-                    <AssumptionTag />
-                    <span className="text-[11px] text-slate-500">
-                      expected avoided {c.expected_avoided_readmissions.toFixed(3)}{" "}
-                      (held-out labels × assumed effect)
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <p className="text-[11px] text-slate-500 mt-3">
-              "Readmissions reached" uses true held-out outcomes only. "Avoided"
-              multiplies those outcomes by assumed effect sizes — an assumption,
-              not a prediction. See Ops for the 200-day replay with ranges.
-            </p>
-          </Card>
+          <div className="worklist-hero-grid">
+            <Card title="Why not just call the sickest?" className="worklist-hero-card">
+              <div className="hero-metric-heading">Expected avoided readmissions</div>
+              <div className="hero-metric-line">
+                <div className="hero-number">{metrics.careAvoided.toFixed(2)}</div>
+                {metrics.lift !== null && <DeltaPill value={metrics.lift} suffix="% vs risk-only" />}
+              </div>
+              <div className="comparison-legend">
+                <span><i className="legend-swatch care" />CareTrace</span>
+                <span><i className="legend-swatch risk" />Risk-only</span>
+              </div>
+              <div className="comparison-bars">
+                <ComparisonBar label="Calls made" care={metrics.careCalls} risk={metrics.riskCalls} />
+                <ComparisonBar label="Readmissions reached" care={metrics.careReached} risk={metrics.riskReached} />
+                <ComparisonBar label="Avoided per hour" care={policyValue(data.comparison || [], "caretrace", "expected_avoided_per_hour")} risk={policyValue(data.comparison || [], "risk-only", "expected_avoided_per_hour")} format={(n) => Number(n || 0).toFixed(3)} />
+              </div>
+              <p className="worklist-footnote">Reached uses held-out readmission outcomes. Avoided estimates use assumed intervention effects.</p>
+            </Card>
 
-          {/* ---------------------------------------- main table */}
-          <Card
-            title={`Optimizer selection — ${data.selection.length} patients in ${hours} h`}
-            right={
-              <span className="text-xs text-slate-500">
-                Δ = position vs risk-only ranking
-              </span>
-            }
-          >
+            <div className="worklist-insight-card">
+              <div className="insight-kicker">200-day replay context</div>
+              <div className="insight-number">{metrics.lift === null ? "—" : `${metrics.lift >= 0 ? "+" : ""}${metrics.lift.toFixed(1)}%`}</div>
+              <p>{metrics.lift === null
+                ? "A risk-only comparison is not available for this budget."
+                : `CareTrace's estimated avoided readmissions are ${Math.abs(metrics.lift).toFixed(1)}% ${metrics.lift >= 0 ? "higher" : "lower"} than the risk-only list for this worklist budget.`}</p>
+              <span className="insight-assumption">ⓘ Based on assumed effects</span>
+              <div className="insight-orb insight-orb-one" />
+              <div className="insight-orb insight-orb-two" />
+            </div>
+          </div>
+
+          <div className="worklist-kpis">
+            <div className="worklist-kpi">
+              <div className="kpi-label"><i className="kpi-dot amber" />Unreviewed flags</div>
+              <div className="kpi-value">{data.unreviewed_flags ?? "—"}</div>
+              <div className="kpi-detail">Awaiting clinician review</div>
+            </div>
+            <div className="worklist-kpi">
+              <div className="kpi-label">Patients selected</div>
+              <div className="kpi-value">{data.selection.length}<span className="kpi-total"> / {data.cohort_size}</span></div>
+              <div className="kpi-detail">Eligible for a matched action</div>
+            </div>
+            <div className="worklist-kpi">
+              <div className="kpi-label">Minutes used</div>
+              <div className="kpi-value">{metrics.used}<span className="kpi-total"> / {data.budget_minutes}</span></div>
+              <div className="kpi-progress"><span style={{ width: `${Math.min(100, data.budget_minutes ? metrics.used / data.budget_minutes * 100 : 0)}%` }} /></div>
+            </div>
+          </div>
+
+          <div className="worklist-toolbar">
+            <div className="toolbar-title">
+              <strong>Coordinator time</strong>
+              <span>Set the time available for follow-up today</span>
+            </div>
+            <div className="toolbar-slider">
+              <input id="hours" type="range" min="1" max="8" step="1" value={hours} onChange={(e) => setHours(Number(e.target.value))} aria-label="Coordinator hours today" />
+              <div className="slider-ticks"><span>1</span><span>2</span><span>4</span><span>6</span><span>8 h</span></div>
+            </div>
+            <span className="hours-value">{hours} h ({hours * 60} min)</span>
+            <button className="toolbar-reset" type="button" onClick={() => setHours(4)}>Reset</button>
+          </div>
+
+          <Card title={`Optimizer selection · ${data.selection.length} patients`} right={<span className="table-context">Ranked within {hours} h · {data.elapsed_ms} ms</span>}>
             <div className="overflow-x-auto">
-              <table className="compact w-full text-sm">
-                <thead>
-                  <tr className="text-left text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
-                    <th className="py-2">#</th>
-                    <th>Patient</th>
-                    <th>Risk</th>
-                    <th>Top modifiable driver</th>
-                    <th>Matched action</th>
-                    <th className="text-right">Min</th>
-                    <th>Status</th>
-                    <th className="text-right">vs risk-only</th>
-                  </tr>
-                </thead>
+              <table className="compact worklist-table w-full text-sm">
+                <thead><tr>
+                  <th>#</th><th>Patient</th><th>Risk</th><th>Top modifiable driver</th><th>Matched action</th><th className="text-right">Min</th><th>Status</th><th className="text-right">vs risk-only</th>
+                </tr></thead>
                 <tbody>
                   {data.selection.map((r) => (
-                    <tr
-                      key={r.patient_id}
-                      className="border-b border-slate-100 hover:bg-slate-50 cursor-pointer"
-                      onClick={() => onOpenPatient(r.patient_id)}
-                    >
-                      <td className="font-medium text-slate-500">{r.rank}</td>
-                      <td className="font-mono text-xs">#{r.patient_nbr}</td>
-                      <td className="font-semibold">{pct(r.risk, 1)}</td>
-                      <td className="text-slate-700">{r.driver || "—"}</td>
-                      <td>
-                        {r.action ? (
-                          <span className="text-teal-800">{r.action.name}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                        {r.action && (
-                          <span className="ml-1 text-[10px] text-slate-400">
-                            {r.action.effect_label} <AssumptionTag />
-                          </span>
-                        )}
-                      </td>
-                      <td className="text-right text-slate-600">{r.minutes ?? "—"}</td>
-                      <td>
-                        <StatusChip status={r.status} />
-                      </td>
-                      <td className="text-right">
-                        <Delta value={r.delta} />
-                      </td>
+                    <tr key={r.patient_id} onClick={() => onOpenPatient(r.patient_id)} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenPatient(r.patient_id); } }}>
+                      <td><span className="rank-circle">{r.rank}</span></td>
+                      <td><strong className="patient-id">#{r.patient_nbr}</strong></td>
+                      <td><RiskMeter value={r.risk} /></td>
+                      <td><span className="work-driver-chip">{r.driver || "—"}</span></td>
+                      <td><div className="action-cell"><strong>{r.action?.name || "—"}</strong>{r.action?.effect_label && <span>{r.action.effect_label} assumed</span>}</div></td>
+                      <td className="text-right tabular-nums">{r.minutes ?? "—"}</td>
+                      <td><StatusChip status={r.status} /></td>
+                      <td className="text-right"><DeltaPill value={r.delta} /></td>
                     </tr>
                   ))}
-                  {data.selection.length === 0 && (
-                    <tr>
-                      <td colSpan="8" className="py-6 text-center text-slate-500">
-                        No eligible actions for this budget.
-                      </td>
-                    </tr>
-                  )}
+                  {data.selection.length === 0 && <tr><td colSpan="8" className="py-8 text-center text-slate-500">No eligible actions for this budget.</td></tr>}
                 </tbody>
               </table>
             </div>
-            <div className="mt-2 text-[11px] text-slate-500">
-              Rows promoted (▲) by CareTrace are patients whose modifiable drivers
-              make the call more worthwhile than raw risk suggests; demoted (▼)
-              rows are sicker but have little an intervention can change.{" "}
-              {role === "coordinator" && (
-                <span className="text-amber-700">
-                  Switch to Clinician to approve, edit or reject flags.
-                </span>
-              )}
-            </div>
+            <div className="table-note">Rows promoted by CareTrace have modifiable drivers that make follow-up more worthwhile than raw risk alone. Demoted rows may have high risk but fewer actionable drivers. {role === "coordinator" && <span>Switch to Clinician to approve, edit or reject flags.</span>}</div>
           </Card>
 
-          {/* ---------------------------------------- below the line */}
-          <Card
-            title={`Below the line — no modifiable driver (${data.no_modifiable_driver.length})`}
-          >
-            <p className="text-xs text-slate-500 mb-2">
-              These patients have no positive modifiable SHAP driver, so no
-              intervention in the catalog targets them. They are not "safe" —
-              they simply have nothing this catalog can act on.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {data.no_modifiable_driver.map((r) => (
-                <button
-                  key={r.patient_id}
-                  onClick={() => onOpenPatient(r.patient_id)}
-                  className="text-xs border border-slate-200 rounded-md px-2 py-1 hover:bg-slate-50 flex items-center gap-2"
-                >
-                  <span className="font-mono">#{r.patient_nbr}</span>
-                  <span className="text-slate-500">{pct(r.risk, 1)}</span>
-                </button>
-              ))}
+          <details className="no-driver-accordion">
+            <summary>
+              <span><strong>{data.no_modifiable_driver.length} patients have no modifiable driver</strong><small>These patients are not considered safe; the current intervention catalog has no matching action.</small></span>
+              <span className="accordion-chevron">⌄</span>
+            </summary>
+            <div className="no-driver-content">
+              <div className="overflow-x-auto">
+                <table className="compact w-full text-sm">
+                  <thead><tr><th>Patient</th><th>Risk</th><th>Why</th></tr></thead>
+                  <tbody>{data.no_modifiable_driver.map((r) => (
+                    <tr key={r.patient_id} onClick={() => onOpenPatient(r.patient_id)} className="cursor-pointer">
+                      <td><strong>#{r.patient_nbr}</strong></td>
+                      <td><RiskMeter value={r.risk} /></td>
+                      <td className="text-slate-600">No positive modifiable SHAP driver matched by the intervention catalog.</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
             </div>
-          </Card>
+          </details>
         </>
       )}
     </div>
