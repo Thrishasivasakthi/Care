@@ -159,7 +159,8 @@ export default function Patient({ patientId, role, onBack }) {
   const canAct = role === "clinician" && p.plan;
 
   return (
-    <div className="space-y-4">
+    <div className="page-stack">
+      <div className="banner">Decision support only. Review source data and clinical context before acting. Assumed intervention effects are not predictions.</div>
       <div className="flex items-center gap-3">
         <button onClick={onBack} className="text-sm text-teal-700">
           ← back to worklist
@@ -308,7 +309,7 @@ export default function Patient({ patientId, role, onBack }) {
       <div className="grid lg:grid-cols-2 gap-4">
         <Card title="Matched interventions">
           {p.matched_interventions.length ? (
-            <table className="compact w-full text-sm">
+            <table className="table compact w-full text-sm">
               <thead>
                 <tr className="text-left text-[11px] uppercase text-slate-500 border-b border-slate-200">
                   <th className="py-1">Intervention</th>
