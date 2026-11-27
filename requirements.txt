@@ -1,0 +1,19 @@
+# CareTrace pinned dependencies (Python 3.11/3.12)
+# Backend
+fastapi==0.142.2
+uvicorn==0.54.0
+pydantic==2.13.5
+sqlalchemy==2.1.9
+httpx==0.28.1
+# ML
+pandas==3.0.6
+numpy==2.3.5
+scikit-learn==1.9.1
+xgboost==3.4.1
+shap==0.54.1
+joblib==1.6.0
+# LLM layer (optional at runtime: every call has a no-LLM fallback)
+langchain==1.5.2
+langchain-anthropic==1.7.13
+# Tests
+pytest==9.1.1

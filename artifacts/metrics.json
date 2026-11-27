@@ -1,0 +1,140 @@
+{
+  "dataset": {
+    "rows": 101766,
+    "rows_after_exclusions": 69990,
+    "patients": 69990,
+    "excluded_discharge_ids": [
+      11,
+      13,
+      14,
+      19,
+      20,
+      21
+    ],
+    "target": "readmitted == '<30'"
+  },
+  "split": {
+    "train": 41994,
+    "calibration": 13998,
+    "test": 13998
+  },
+  "seed": 2025,
+  "n_features": 101,
+  "base_rate_test": 0.09222746106586656,
+  "base_rate_train": 0.08817926370433872,
+  "roc_auc": 0.6511059579924994,
+  "pr_auc": 0.1750080591575129,
+  "top20_fraction": 0.2,
+  "top20_capture": 0.3640588690937258,
+  "high_risk_cutoff": 0.11309311538934708,
+  "n_high_risk_test": 3712,
+  "calibration_points": [
+    {
+      "bin": 0,
+      "n": 1298,
+      "predicted": 0.03791966289281845,
+      "observed": 0.03852080123266564
+    },
+    {
+      "bin": 1,
+      "n": 824,
+      "predicted": 0.04854968562722206,
+      "observed": 0.044902912621359224
+    },
+    {
+      "bin": 2,
+      "n": 985,
+      "predicted": 0.05855783075094223,
+      "observed": 0.05482233502538071
+    },
+    {
+      "bin": 3,
+      "n": 2296,
+      "predicted": 0.0663038045167923,
+      "observed": 0.0666376306620209
+    },
+    {
+      "bin": 4,
+      "n": 1390,
+      "predicted": 0.07471662759780884,
+      "observed": 0.06690647482014389
+    },
+    {
+      "bin": 5,
+      "n": 1591,
+      "predicted": 0.0820407047867775,
+      "observed": 0.08296668761785041
+    },
+    {
+      "bin": 6,
+      "n": 1290,
+      "predicted": 0.08967053145170212,
+      "observed": 0.09922480620155039
+    },
+    {
+      "bin": 7,
+      "n": 612,
+      "predicted": 0.11309313029050827,
+      "observed": 0.09313725490196079
+    },
+    {
+      "bin": 8,
+      "n": 2221,
+      "predicted": 0.11349695175886154,
+      "observed": 0.11931562359297614
+    },
+    {
+      "bin": 9,
+      "n": 1491,
+      "predicted": 0.21428334712982178,
+      "observed": 0.215962441314554
+    }
+  ],
+  "model": {
+    "type": "XGBoost",
+    "params": {
+      "n_estimators": 400,
+      "max_depth": 4,
+      "learning_rate": 0.05,
+      "subsample": 0.8,
+      "colsample_bytree": 0.8,
+      "min_child_weight": 5,
+      "reg_lambda": 1.0,
+      "objective": "binary:logistic",
+      "eval_metric": "logloss",
+      "tree_method": "hist",
+      "random_state": 2025,
+      "n_jobs": -1
+    },
+    "scale_pos_weight": 10.340534701593302
+  },
+  "calibration": "isotonic (calibration split)",
+  "concept_importance": {
+    "Prior use": 0.1699196008329692,
+    "Demographics": 0.10932962240802511,
+    "Stay severity": 0.1369593695803883,
+    "Medication complexity": 0.11120254956028161,
+    "Discharge setting": 0.2856679886590269,
+    "Follow-up access": 0.02068313684482405,
+    "Admission context": 0.14574656218994284
+  },
+  "concept_order": [
+    "Prior use",
+    "Demographics",
+    "Stay severity",
+    "Medication complexity",
+    "Discharge setting",
+    "Follow-up access",
+    "Admission context"
+  ],
+  "modifiable_concepts": [
+    "Discharge setting",
+    "Follow-up access",
+    "Medication complexity"
+  ],
+  "notes": [
+    "Honest out-of-sample metrics; no tuning to inflate AUC.",
+    "SHAP is computed on the raw model; calibrated risk is used for flags.",
+    "High-risk flag = calibrated risk >= high_risk_cutoff (value at the top-20% rank on test). Isotonic calibration makes many risks identical, so ties at the cutoff flag 3712/13998 = 27% of test rows rather than exactly 20%."
+  ]
+}

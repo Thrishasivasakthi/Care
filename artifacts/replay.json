@@ -1,0 +1,83 @@
+{
+  "generated_at": "2026-11-27T15:13:19.144978+00:00",
+  "days": 200,
+  "cohort_size": 60,
+  "budget_minutes": 240,
+  "budget_hours": 4.0,
+  "seed": 2025,
+  "test_population": 13998,
+  "elapsed_seconds": 0.41,
+  "policies": {
+    "chronological": {
+      "readmissions_reached": {
+        "mean": 1.355,
+        "p10": 0.0,
+        "p90": 3.0,
+        "min": 0.0,
+        "max": 4.0
+      },
+      "expected_avoided_readmissions": {
+        "mean": 0.1635,
+        "p10": 0.0,
+        "p90": 0.4,
+        "min": 0.0,
+        "max": 0.55
+      }
+    },
+    "raw_risk": {
+      "readmissions_reached": {
+        "mean": 1.855,
+        "p10": 0.0,
+        "p90": 3.0,
+        "min": 0.0,
+        "max": 5.0
+      },
+      "expected_avoided_readmissions": {
+        "mean": 0.20600000000000002,
+        "p10": 0.0,
+        "p90": 0.4,
+        "min": 0.0,
+        "max": 0.6000000000000001
+      }
+    },
+    "caretrace": {
+      "readmissions_reached": {
+        "mean": 1.5,
+        "p10": 0.0,
+        "p90": 3.0,
+        "min": 0.0,
+        "max": 5.0
+      },
+      "expected_avoided_readmissions": {
+        "mean": 0.16950000000000004,
+        "p10": 0.0,
+        "p90": 0.35000000000000003,
+        "min": 0.0,
+        "max": 0.6000000000000001
+      }
+    },
+    "human": {
+      "readmissions_reached": {
+        "mean": 1.26,
+        "p10": 0.0,
+        "p90": 3.0,
+        "min": 0.0,
+        "max": 4.0
+      },
+      "expected_avoided_readmissions": {
+        "mean": 0.153,
+        "p10": 0.0,
+        "p90": 0.30499999999999977,
+        "min": 0.0,
+        "max": 0.6000000000000001
+      }
+    }
+  },
+  "metric_definitions": {
+    "readmissions_reached": "True held-out readmissions among patients the policy would call (true labels only).",
+    "expected_avoided_readmissions": "True label x mid effect of the assigned action. DEPENDS ON ASSUMED EFFECT SIZES - assumption, not a prediction.",
+    "expected": "Raw risk may tie or win on readmissions reached; that is expected. Metrics are mean with 10th-90th percentile over the simulated days.",
+    "eligibility": "All four policies draw from the same pool: patients with at least one eligible action, using the same eligibility rules."
+  },
+  "warning": "WARNING: CareTrace did NOT beat raw risk on expected avoided readmissions (0.17 vs 0.21 mean over 200 days). Adjust the pitch: report metric 1 (real readmissions reached) and note metric 2 depends on ASSUMED effects."
+}
