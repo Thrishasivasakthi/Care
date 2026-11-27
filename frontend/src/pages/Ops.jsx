@@ -110,7 +110,8 @@ export default function Ops() {
     n === "caretrace" ? TEAL : n === "raw_risk" ? "#2563eb" : SLATE;
 
   return (
-    <div className="space-y-4">
+    <div className="page-stack">
+      <div className="banner">Decision support only. Review source data and clinical context before acting. Assumed intervention effects are not predictions.</div>
       <ErrorBox message={error} />
 
       {/* ------------------------------------------------ model card */}

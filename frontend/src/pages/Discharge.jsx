@@ -107,7 +107,8 @@ export default function Discharge({ role, onOpenPatient }) {
   const ins = d?.instructions;
 
   return (
-    <div className="space-y-4">
+    <div className="page-stack">
+      <div className="banner">Decision support only. Review source data and clinical context before acting. Assumed intervention effects are not predictions.</div>
       <ErrorBox message={error} />
       {flash && (
         <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-1.5 w-fit">
@@ -348,7 +349,7 @@ export default function Discharge({ role, onOpenPatient }) {
         {!d ? (
           <Spinner />
         ) : d.tasks.length ? (
-          <table className="compact w-full text-sm">
+          <table className="table compact w-full text-sm">
             <thead>
               <tr className="text-left text-[11px] uppercase text-slate-500 border-b border-slate-200">
                 <th className="py-1">Task</th>

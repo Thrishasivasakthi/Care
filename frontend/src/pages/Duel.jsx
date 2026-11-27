@@ -92,7 +92,8 @@ export default function Duel() {
     : [];
 
   return (
-    <div className="space-y-4">
+    <div className="page-stack">
+      <div className="banner">Decision support only. Review source data and clinical context before acting. Assumed intervention effects are not predictions.</div>
       <ErrorBox message={error} />
 
       <Card title="Beat the AI — 15 patients, your budget vs two strategies">
@@ -147,7 +148,7 @@ export default function Duel() {
                 key={p.patient_nbr}
                 disabled={!!result || overBudget}
                 onClick={() => toggle(p.patient_nbr)}
-                className={`text-left border rounded-lg p-3 transition ${
+                className={`duel-option text-left border rounded-xl p-4 transition ${
                   isPicked
                     ? "border-teal-500 bg-teal-50"
                     : overBudget
