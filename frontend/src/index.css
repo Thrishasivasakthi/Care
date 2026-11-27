@@ -706,3 +706,22 @@ button:disabled { transform:none !important; }
   .discharge-printable { padding:18px; }
   .discharge-paper-header { flex-direction:column; }
 }
+
+
+/* Step 7 — guided demo walkthrough */
+.demo-start-button { min-height:38px; padding:0 13px; border:1px solid #BFDCD5; border-radius:11px; background:#EFF8F6; color:#0B514C; font-size:12px; font-weight:800; white-space:nowrap; transition:background .16s ease,transform .16s ease; }
+.demo-start-button:hover { background:#DDF1EC; transform:translateY(-1px); }
+.demo-caption-bar { position:fixed; z-index:100; left:50%; bottom:18px; transform:translateX(-50%); display:flex; align-items:center; justify-content:space-between; gap:24px; width:min(900px,calc(100vw - 32px)); padding:15px 18px; border:1px solid rgba(255,255,255,.16); border-radius:17px; background:#0B2545; color:#FFFFFF; box-shadow:0 18px 55px rgba(11,37,69,.3); }
+.demo-caption-copy { min-width:0; }
+.demo-caption-step { color:#8DD5C8; font-size:11px; font-weight:800; letter-spacing:.06em; }
+.demo-caption-text { margin-top:4px; color:#FFFFFF; font-size:16px; line-height:1.35; font-weight:650; }
+.demo-caption-controls { display:flex; flex:0 0 auto; align-items:center; gap:7px; }
+.demo-caption-controls button { min-height:36px; padding:0 12px; border:1px solid rgba(255,255,255,.28); border-radius:9px; background:rgba(255,255,255,.08); color:#FFFFFF; font-size:12px; font-weight:750; }
+.demo-caption-controls button.primary { border-color:#0F766E; background:#0F766E; color:#FFFFFF; }
+.demo-caption-controls button.exit { border-color:transparent; background:transparent; color:#D3E0E9; }
+.demo-caption-controls button:disabled { opacity:.35; cursor:not-allowed; }
+.demo-highlight { position:relative !important; z-index:25 !important; outline:3px solid #0F766E !important; outline-offset:5px !important; box-shadow:0 0 0 8px rgba(15,118,110,.13),0 0 28px rgba(15,118,110,.22) !important; animation:demo-highlight-pulse 1.7s ease-in-out infinite; }
+@keyframes demo-highlight-pulse { 0%,100% { outline-color:#0F766E; box-shadow:0 0 0 5px rgba(15,118,110,.10),0 0 18px rgba(15,118,110,.15); } 50% { outline-color:#2CB6A4; box-shadow:0 0 0 10px rgba(15,118,110,.18),0 0 30px rgba(15,118,110,.28); } }
+@media(max-width:1100px) { .demo-start-button { font-size:11px; padding:0 9px; } }
+@media(max-width:760px) { .topbar-actions { flex-wrap:wrap; } .demo-start-button { min-height:34px; } .demo-caption-bar { align-items:stretch; flex-direction:column; gap:12px; bottom:10px; padding:13px; } .demo-caption-controls { justify-content:space-between; } .demo-caption-controls button { padding:0 10px; } }
+@media(prefers-reduced-motion:reduce) { .demo-highlight { animation:none !important; } .demo-start-button { transition:none !important; } }
