@@ -160,7 +160,6 @@ export default function Ops() {
   const replay = ops.replay;
   const captureLift = m.top20_capture / .2;
   const care = replay?.policies?.caretrace;
-  const raw = replay?.policies?.raw_risk;
   const isCareTraceHighest = (metricKey) => {
     const careMean = Number(care?.[metricKey]?.mean);
     const policyMeans = POLICY_ORDER
@@ -185,7 +184,37 @@ export default function Ops() {
       <Kpi label="High-risk cutoff" value={pct(m.high_risk_cutoff, 2)} detail={`${m.n_high_risk_test.toLocaleString()} test rows flagged`} />
     </div>
 
-    <div className="ops-main-grid">
+    <div
+      className="ops-insight-card"
+      title="Historical simulation on held-out data. Avoided uses assumed intervention effects."
+      style={{ minHeight: 180, marginBottom: 16, display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 28, alignItems: "center" }}
+    >
+      <div>
+        <span className="ops-insight-kicker">Real readmissions reached</span>
+        <p style={{ margin: "10px 0 0", color: "#FFFFFF", fontSize: 16, lineHeight: 1.5 }}>
+          CareTrace reached at least as many real readmissions as raw risk on{" "}
+          <strong style={{ display: "inline", margin: 0, fontSize: 64, lineHeight: 1, letterSpacing: "-.04em", color: "#FFFFFF" }}>
+            {replay?.win_days_reached ?? "—"}
+          </strong>{" "}
+          of {replay?.n_days ?? replay?.days ?? "—"} simulated days
+        </p>
+      </div>
+      <div>
+        <span className="ops-insight-kicker">Expected avoided readmissions · assumed effects</span>
+        <p style={{ margin: "10px 0 0", color: "#FFFFFF", fontSize: 16, lineHeight: 1.5 }}>
+          and avoided more expected readmissions on{" "}
+          <strong style={{ display: "inline", margin: 0, fontSize: 64, lineHeight: 1, letterSpacing: "-.04em", color: "#FFFFFF" }}>
+            {replay?.win_days_avoided ?? "—"}
+          </strong>{" "}
+          of {replay?.n_days ?? replay?.days ?? "—"} days (assumed effects)
+        </p>
+      </div>
+      <small style={{ gridColumn: "1 / -1", marginTop: 8 }}>
+        ⓘ Historical simulation on held-out data. Avoided uses assumed intervention effects.
+      </small>
+    </div>
+
+    <div className="ops-main-grid" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
       <Card title={`Replay backtest · ${replay ? `${replay.days} simulated days` : "not generated"}`} right={<span className="ops-dataset-note">{replay ? `${replay.cohort_size} patients · ${replay.budget_hours} h budget` : "Replay artifact"}</span>}>
         {!replay ? <p className="ops-empty">Generate the replay artifact to display the historical strategy comparison.</p> : <>
           {replay.warning && <div className="ops-warning">{replay.warning}</div>}
@@ -200,12 +229,6 @@ export default function Ops() {
         </>}
       </Card>
 
-      <div className="ops-insight-card">
-        <span className="ops-insight-kicker">CareTrace vs raw risk</span>
-        <strong>{care && raw ? `${raw.readmissions_reached.mean > 0 ? ((care.readmissions_reached.mean - raw.readmissions_reached.mean) / raw.readmissions_reached.mean * 100).toFixed(1) : "—"}%` : "—"}</strong>
-        <p>Difference in real readmissions reached across the replay. The result is based on historical held-out labels, not a guarantee of future outcomes.</p>
-        <small>ⓘ Replay comparison · historical simulation</small>
-      </div>
     </div>
 
     <div className="ops-secondary-grid">
