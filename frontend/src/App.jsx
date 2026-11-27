@@ -13,6 +13,14 @@ const TABS = [
   { id: "Ops", label: "Ops" },
 ];
 
+const DEMO_STEPS = [
+  { route: "Worklist", target: "worklist-budget", caption: "Coordinators have limited hours", title: "1 · Set the 4-hour budget" },
+  { route: "Worklist", target: "worklist-budget", caption: "The list re-ranks live", title: "2 · Reduce the budget to 2 hours" },
+  { route: "Patient", target: "patient-drivers", caption: "Why this patient: changeable drivers", title: "3 · Inspect the top patient's drivers" },
+  { route: "Discharge", target: "discharge-handout", caption: "Verified patient instructions", title: "4 · Prepare the discharge handout" },
+  { route: "Ops", target: "ops-replay", caption: "Tested on held-out data, with honest limits", title: "5 · Review the historical replay" },
+];
+
 const ASSUMPTION_TEXT =
   "Intervention effect sizes and avoided-readmission estimates are assumptions for this demo, not clinical predictions or evidence of causal impact. The model estimates 30-day readmission risk from historical data. It does not establish that an intervention will prevent a readmission. Use outputs as decision support only; clinician review remains required.";
 
@@ -37,11 +45,70 @@ export default function App() {
   const [role, setRoleState] = useState(getRole());
   const [tab, setTab] = useState("Worklist");
   const [patientId, setPatientId] = useState(null);
-  const [meta, setMeta] = useState(null);
+  const [meta, setMeta] = useState(null);\n  const [demoIndex, setDemoIndex] = useState(null);\n  const demoActive = demoIndex !== null;
 
   useEffect(() => {
     api("/meta").then(setMeta).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (demoIndex === null) return;
+    const step = DEMO_STEPS[demoIndex];
+    if (step.route === "Worklist") {
+      setTab("Worklist");
+      if (demoIndex === 2) setPatientId(null);
+    } else if (step.route === "Discharge" || step.route === "Ops") {
+      setTab(step.route);
+    } else if (step.route === "Patient" && patientId) {
+      setTab("Patient");
+    }
+  }, [demoIndex]);
+
+  useEffect(() => {
+    if (!demoActive) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setDemoIndex(null);
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setDemoIndex((current) => current === null ? null : current >= DEMO_STEPS.length - 1 ? null : current + 1);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setDemoIndex((current) => current === null ? null : Math.max(0, current - 1));
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [demoActive]);
+
+  useEffect(() => {
+    if (!demoActive) return undefined;
+    const targetName = DEMO_STEPS[demoIndex]?.target;
+    let frame = 0;
+    const timer = window.setTimeout(() => {
+      document.querySelectorAll(".demo-highlight").forEach((node) => node.classList.remove("demo-highlight"));
+      const target = document.querySelector('[data-demo-target="' + targetName + '"]');
+      if (target) {
+        target.classList.add("demo-highlight");
+        target.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 100);
+    return () => {
+      window.clearTimeout(timer);
+      cancelAnimationFrame(frame);
+      document.querySelectorAll(".demo-highlight").forEach((node) => node.classList.remove("demo-highlight"));
+    };
+  }, [demoIndex, tab, demoActive]);
+
+  const startDemo = () => {
+    setPatientId(null);
+    setTab("Worklist");
+    setDemoIndex(0);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const nextDemoStep = () => setDemoIndex((current) => current === null ? null : current >= DEMO_STEPS.length - 1 ? null : current + 1);
+  const previousDemoStep = () => setDemoIndex((current) => current === null ? null : Math.max(0, current - 1));
 
   const switchRole = (r) => {
     setRole(r);
@@ -120,13 +187,24 @@ export default function App() {
           </details>
         </div>
 
-        {tab === "Worklist" && <Worklist role={role} onOpenPatient={openPatient} />}
+        {tab === "Worklist" && <Worklist role={role} onOpenPatient={openPatient} demoStep={demoIndex} />}
         {tab === "Patient" && <Patient patientId={patientId} role={role} onBack={() => goTab("Worklist")} />}
         {tab === "Discharge" && <Discharge role={role} onOpenPatient={openPatient} />}
         {tab === "Duel" && <Duel />}
         {tab === "Ops" && <Ops />}
       </main>
 
+      {demoActive && <div className="demo-caption-bar" role="region" aria-label="Guided demo controls">
+        <div className="demo-caption-copy">
+          <div className="demo-caption-step">{DEMO_STEPS[demoIndex].title} · {demoIndex + 1} of {DEMO_STEPS.length}</div>
+          <div className="demo-caption-text">{DEMO_STEPS[demoIndex].caption}</div>
+        </div>
+        <div className="demo-caption-controls">
+          <button type="button" onClick={previousDemoStep} disabled={demoIndex === 0}>Back</button>
+          <button type="button" className="primary" onClick={nextDemoStep}>{demoIndex === DEMO_STEPS.length - 1 ? "Finish" : "Next"}</button>
+          <button type="button" className="exit" onClick={() => setDemoIndex(null)} aria-label="Exit guided demo">Esc · Exit</button>
+        </div>
+      </div>}
       <footer className="app-footer">
         <span>Clinical safety: decision support only, not a diagnostic tool. High-risk flags require clinician review; decisions are logged.</span>
         <span>{ASSUMPTION_TEXT}</span>
