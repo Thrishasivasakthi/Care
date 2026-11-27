@@ -112,7 +112,7 @@ function RankMovement({ movement }) {
   );
 }
 
-export default function Worklist({ role, onOpenPatient }) {
+export default function Worklist({ role, onOpenPatient, demoStep = null }) {
   const [hours, setHours] = useState(4);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -124,7 +124,7 @@ export default function Worklist({ role, onOpenPatient }) {
   const previousSelected = useRef(new Set());
   const hasRenderedSelection = useRef(false);
   const [rankMovements, setRankMovements] = useState({});
-  const [enteredIds, setEnteredIds] = useState([]);
+  const [enteredIds, setEnteredIds] = useState([]);\n  const autoOpenedDemoPatient = useRef(false);
 
   const load = useCallback((h) => {
     api(`/worklist?hours=${h}`)
@@ -286,7 +286,7 @@ export default function Worklist({ role, onOpenPatient }) {
             </div>
           </div>
 
-          <div className="worklist-toolbar">
+          <div className="worklist-toolbar" data-demo-target="worklist-budget">
             <div className="toolbar-title">
               <strong>Coordinator time</strong>
               <span>Set the time available for follow-up today</span>
