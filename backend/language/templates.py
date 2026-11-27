@@ -45,14 +45,23 @@ def active_drugs(patient: dict) -> list[str]:
     return [d for d in drugs if d]
 
 
-def slot_values(\n    patient: dict, intervention: dict | None, demo_date: date,\n    followup_date: date | None = None,\n) -> dict:
-    """Compute every slot from the patient record. A value of None means
-    'cannot be filled from the record' and will leave the placeholder
-    behind -> verified=False."""
+def slot_values(
+    patient: dict, intervention: dict | None, demo_date: date,
+    followup_date: date | None = None,
+) -> dict:
+    """Compute every slot from the patient record and the shared task date."""
     drugs = active_drugs(patient)
+    if followup_date is not None:
+        followup = followup_date
+    elif demo_date and intervention:
+        followup = demo_date + timedelta(days=int(intervention["window_start_day"]))
+    elif demo_date:
+        followup = demo_date + timedelta(days=2)
+    else:
+        followup = None
     return {
         "DRUG_1": drugs[0] if drugs else None,
-        "FOLLOWUP_DATE": (\n            followup_date.isoformat() if followup_date else\n            (demo_date + timedelta(days=int(intervention["window_start_day"]))).isoformat()\n            if demo_date and intervention else\n            (demo_date + timedelta(days=2)).isoformat() if demo_date else None\n        ),
+        "FOLLOWUP_DATE": followup.isoformat() if followup else None,
         "INTERVENTION": intervention["name"] if intervention else None,
     }
 
@@ -166,9 +175,10 @@ def validate_llm_text(text: str) -> bool:
 # --------------------------------------------------------------------- #
 
 def render_discharge_instructions(
-    patient: dict, intervention: dict | None, demo_date: date
+    patient: dict, intervention: dict | None, demo_date: date,
+    followup_date: date | None = None,
 ) -> dict:
-    slots = slot_values(patient, intervention, demo_date)
+    slots = slot_values(patient, intervention, demo_date, followup_date)
     source = "fallback"
     text = fallback_template(slots)
 
@@ -201,10 +211,11 @@ def render_discharge_instructions(
 # --------------------------------------------------------------------- #
 
 def render_regional_instructions(
-    patient: dict, intervention: dict | None, demo_date: date, lang: str | None = None
+    patient: dict, intervention: dict | None, demo_date: date,
+    lang: str | None = None, followup_date: date | None = None,
 ) -> dict:
     lang = lang or reg.configured_lang()
-    slots = slot_values(patient, intervention, demo_date)
+    slots = slot_values(patient, intervention, demo_date, followup_date)
     text = reg.regional_template(lang)
     filled, missing = fill(text, slots)
     verified = not missing and "{" not in filled
