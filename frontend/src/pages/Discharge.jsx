@@ -3,6 +3,24 @@ import { api } from "../api.js";
 import { Card, ErrorBox, Spinner, StatusChip, AssumptionTag } from "../components/bits.jsx";
 
 const TASK_STATUSES = ["Due", "Done", "Missed", "Escalated"];
+const LANGUAGES = [{ value: "", label: "English" }, { value: "hi", label: "Hindi" }, { value: "mr", label: "Marathi" }, { value: "ta", label: "Tamil" }];
+
+function TaskTimeline({ tasks, demoDate, onPatch }) {
+  if (!tasks?.length) return <div className="discharge-empty">No follow-up tasks yet. Approve a care plan on the patient page first.</div>;
+  return <div className="discharge-task-list">
+    {tasks.map((task, index) => {
+      const future = Boolean(task.due_date && demoDate && task.due_date > demoDate);
+      return <div className="discharge-task-row" key={task.id}>
+        <div className="discharge-task-marker"><span>{index + 1}</span></div>
+        <div className="discharge-task-main"><div className="discharge-task-title">{task.title}</div><div className="discharge-task-meta"><span>{task.due_date || "Date not set"}</span>{future && <span className="discharge-future-tag">Upcoming</span>}</div></div>
+        <div className="discharge-task-state"><StatusChip status={task.status} /></div>
+        <select aria-label={"Update status for " + task.title} value={task.status} onChange={(e) => onPatch(task.id, e.target.value)} className="discharge-task-select">
+          {TASK_STATUSES.map((status) => <option key={status} value={status} disabled={future && status === "Done"}>{status}</option>)}
+        </select>
+      </div>;
+    })}
+  </div>;
+}
 
 export default function Discharge({ role, onOpenPatient }) {
   const [list, setList] = useState(null);
@@ -12,57 +30,34 @@ export default function Discharge({ role, onOpenPatient }) {
   const [regional, setRegional] = useState(null);
   const [error, setError] = useState(null);
   const [flash, setFlash] = useState(null);
-
-  const [view, setView] = useState("instructions"); // instructions | checkin
+  const [view, setView] = useState("instructions");
   const [chatInput, setChatInput] = useState("");
   const [chat, setChat] = useState([]);
   const [chatBusy, setChatBusy] = useState(false);
   const [escalations, setEscalations] = useState([]);
 
   useEffect(() => {
-    api("/worklist?hours=4")
-      .then((w) => {
-        setList(w.ranking);
-        if (w.ranking.length) setPatientId(w.ranking[0].patient_id);
-      })
-      .catch((e) => setError(e.message));
+    api("/worklist?hours=4").then((w) => { setList(w.ranking); if (w.ranking.length) setPatientId(w.ranking[0].patient_id); }).catch((e) => setError(e.message));
   }, []);
 
   useEffect(() => {
     if (!patientId) return;
-    setD(null);
-    setRegional(null);
-    setChat([]);
-    api(`/discharge/${patientId}`)
-      .then((x) => {
-        setD(x);
-        setError(null);
-      })
-      .catch((e) => setError(e.message));
-    api("/escalations")
-      .then((e) => setEscalations(e.escalations || []))
-      .catch(() => {});
+    setD(null); setRegional(null); setChat([]);
+    api("/discharge/" + patientId).then((x) => { setD(x); setError(null); }).catch((e) => setError(e.message));
+    api("/escalations").then((e) => setEscalations(e.escalations || [])).catch(() => {});
   }, [patientId]);
 
   useEffect(() => {
-    if (!patientId || !regionalLang) {
-      setRegional(null);
-      return;
-    }
-    api(`/discharge/${patientId}?lang=${regionalLang}`)
-      .then((x) => setRegional(x.regional_instructions))
-      .catch((e) => setError(e.message));
+    if (!patientId || !regionalLang) { setRegional(null); return; }
+    api("/discharge/" + patientId + "?lang=" + regionalLang).then((x) => setRegional(x.regional_instructions)).catch((e) => setError(e.message));
   }, [patientId, regionalLang]);
 
   const patchTask = async (id, status) => {
     try {
-      await api(`/tasks/${id}`, { method: "PATCH", body: { status } });
-      setFlash(`task #${id} → ${status} (logged in audit)`);
-      const x = await api(`/discharge/${patientId}`);
-      setD(x);
-    } catch (e) {
-      setError(e.message);
-    }
+      await api("/tasks/" + id, { method: "PATCH", body: { status } });
+      setFlash("Task #" + id + " updated to " + status + " and logged in audit.");
+      setD(await api("/discharge/" + patientId));
+    } catch (e) { setError(e.message); }
   };
 
   const sendChat = async () => {
@@ -72,327 +67,95 @@ export default function Discharge({ role, onOpenPatient }) {
     setChat((c) => [...c, { role: "patient", text: msg }]);
     setChatBusy(true);
     try {
-      const r = await api(`/checkin/${patientId}/message`, {
-        method: "POST",
-        body: { message: msg },
-      });
-      setChat((c) => [
-        ...c,
-        { role: "agent", text: r.reply, barrier: r.barrier, escalationId: r.escalation_id },
-      ]);
-      api("/escalations")
-        .then((e) => setEscalations(e.escalations || []))
-        .catch(() => {});
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setChatBusy(false);
-    }
+      const r = await api("/checkin/" + patientId + "/message", { method: "POST", body: { message: msg } });
+      setChat((c) => [...c, { role: "agent", text: r.reply, barrier: r.barrier, escalationId: r.escalation_id }]);
+      api("/escalations").then((e) => setEscalations(e.escalations || [])).catch(() => {});
+    } catch (e) { setError(e.message); } finally { setChatBusy(false); }
   };
 
   const decideEscalation = async (id, action) => {
     try {
-      await api(`/escalation/${id}/decision`, {
-        method: "POST",
-        body: { action, note: "reviewed in demo" },
-      });
+      await api("/escalation/" + id + "/decision", { method: "POST", body: { action, note: "reviewed in demo" } });
       const e = await api("/escalations");
       setEscalations(e.escalations || []);
-      setFlash(`escalation #${id} → ${action === "approve" ? "Approved" : "Rejected"}`);
-    } catch (e) {
-      setError(e.message);
-    }
+      setFlash("Escalation #" + id + (action === "approve" ? " approved." : " rejected."));
+    } catch (e) { setError(e.message); }
   };
 
+  const selected = (list || []).find((item) => item.patient_id === patientId);
   const ins = d?.instructions;
 
-  return (
-    <div className="space-y-4">
-      <ErrorBox message={error} />
-      {flash && (
-        <div className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-1.5 w-fit">
-          ✓ {flash} (logged in audit)
-        </div>
-      )}
+  return <div className="discharge-page">
+    <ErrorBox message={error} />
+    {flash && <div className="discharge-flash"><span>✓</span>{flash}<button onClick={() => setFlash(null)} aria-label="Dismiss notification">×</button></div>}
+    <div className="discharge-workspace">
+      <aside className="discharge-patient-panel">
+        <div className="discharge-panel-eyebrow">CARE COORDINATION</div>
+        <h2>Discharge workspace</h2>
+        <p className="discharge-panel-copy">Prepare a clear handoff and keep post-discharge follow-up visible.</p>
+        <div className="discharge-field-label">SELECTED PATIENT</div>
+        <select value={patientId ?? ""} onChange={(e) => setPatientId(Number(e.target.value))} className="discharge-patient-select">
+          {(list || []).map((r) => <option key={r.patient_id} value={r.patient_id}>Patient #{r.patient_nbr} · {(r.risk * 100).toFixed(1)}% risk</option>)}
+        </select>
+        {selected && <div className="discharge-patient-summary">
+          <div className="discharge-patient-avatar">#{String(selected.patient_nbr).slice(-2)}</div>
+          <div><div className="discharge-patient-number">Patient #{selected.patient_nbr}</div><div className="discharge-patient-id">Record ID {selected.patient_id}</div></div>
+          <span className="discharge-risk-pill">{(selected.risk * 100).toFixed(1)}% risk</span>
+        </div>}
+        <button className="discharge-open-patient" onClick={() => patientId && onOpenPatient(patientId)}>Open full patient record <span>↗</span></button>
+        <div className="discharge-panel-divider" />
+        <div className="discharge-panel-label">WORKFLOW</div>
+        <button onClick={() => setView("instructions")} className={"discharge-workflow-item " + (view === "instructions" ? "active" : "")}><span className="discharge-workflow-icon">▤</span><span><b>Discharge handout</b><small>Instructions and language</small></span><span className="discharge-workflow-arrow">›</span></button>
+        <button onClick={() => setView("checkin")} className={"discharge-workflow-item " + (view === "checkin" ? "active" : "")}><span className="discharge-workflow-icon">◌</span><span><b>Post-discharge check-in</b><small>Patient barriers and escalation</small></span><span className="discharge-workflow-arrow">›</span></button>
+        <div className="discharge-panel-foot"><span className="discharge-live-dot" /> Demo environment · changes are audit logged</div>
+      </aside>
 
-      <Card title="Discharge instructions">
-        <div className="flex flex-wrap items-center gap-3 mb-3">
-          <label className="text-sm text-slate-600">Patient</label>
-          <select
-            value={patientId ?? ""}
-            onChange={(e) => setPatientId(Number(e.target.value))}
-            className="text-sm border border-slate-300 rounded px-2 py-1.5 font-mono"
-          >
-            {(list || []).map((r) => (
-              <option key={r.patient_id} value={r.patient_id}>
-                #{r.patient_nbr} — risk {(r.risk * 100).toFixed(1)}%
-              </option>
-            ))}
-          </select>
-          <button
-            onClick={() => patientId && onOpenPatient(patientId)}
-            className="text-xs text-teal-700"
-          >
-            open full patient page →
-          </button>
-        </div>
-
-        <div className="flex gap-1 mb-3">
-          {["instructions", "checkin"].map((v) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`px-3 py-1.5 rounded-md text-sm capitalize ${
-                view === v
-                  ? "bg-teal-700 text-white"
-                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
-            >
-              {v === "checkin" ? "Check-in agent" : "Instructions"}
-            </button>
-          ))}
-        </div>
-
-        {view === "instructions" ? (
-          !d ? (
-            <Spinner label="Generating instructions…" />
-          ) : (
-            <>
-              <div className="flex flex-wrap items-center gap-2 mb-2">
-                {ins.verified ? (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
-                    ✓ verified — every slot filled from the record by code
-                  </span>
-                ) : (
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                    ⚠ unverified — slot missing
-                  </span>
-                )}
-                <span className="text-[11px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-                  source: {ins.source === "llm" ? "LLM (slots only)" : "fixed template (no LLM key)"}
-                </span>
-              </div>
-              <pre className="whitespace-pre-wrap text-sm bg-slate-50 border border-slate-200 rounded p-3 leading-relaxed">
-                {ins.text}
-              </pre>
-              <div className="text-[11px] text-slate-500 mt-2">
-                The LLM only phrases placeholder text; code fills{" "}
-                {Object.keys(ins.slots_used).join(", ") || "—"} from the patient record.
-                It never writes a drug name, date, dose or number — invalid LLM
-                output is discarded. {ins.note}
-              </div>
-
-              {/* regional language toggle */}
-              <div className="mt-4 border-t border-slate-100 pt-3">
-                <div className="flex flex-wrap items-center gap-2 mb-2">
-                  <span className="text-xs font-semibold text-slate-600">
-                    Regional language
-                  </span>
-                  <select
-                    value={regionalLang}
-                    onChange={(e) => setRegionalLang(e.target.value)}
-                    className="text-sm border border-slate-300 rounded px-2 py-1.5"
-                  >
-                    <option value="">English only</option>
-                    <option value="hi">Hindi (hi)</option>
-                    <option value="mr">Marathi (mr)</option>
-                    <option value="ta">Tamil (ta)</option>
-                  </select>
-                  {regional && (
-                    <span
-                      className={`text-[11px] px-2 py-0.5 rounded-full border ${
-                        regional.verified
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-rose-50 text-rose-700 border-rose-200"
-                      }`}
-                    >
-                      {regional.verified ? "✓ verified" : "⚠ unverified"}
-                    </span>
-                  )}
-                  {regional?.needs_native_review && (
-                    <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                      template pending native review
-                    </span>
-                  )}
-                </div>
-                {regional && (
-                  <>
-                    <pre className="whitespace-pre-wrap text-sm bg-slate-50 border border-slate-200 rounded p-3 leading-relaxed">
-                      {regional.text}
-                    </pre>
-                    <div className="text-[11px] text-slate-500 mt-2">
-                      {regional.back_translation}
-                    </div>
-                    <div className="text-[10px] text-amber-700 mt-1">
-                      Back-translation is a readability aid only, not clinically
-                      verified. {regional.note}
-                    </div>
-                  </>
-                )}
-              </div>
-            </>
-          )
-        ) : (
-          <div className="space-y-3">
-            <div className="text-xs text-slate-500">
-              Simulated post-discharge check-in. You play the patient. The agent
-              never changes medication, never gives a dose, never gives medical
-              advice — it only flags barriers to your care team.
+      <div className="discharge-main-column">
+        {!d ? <Spinner label="Loading discharge record…" /> : view === "instructions" ? <>
+          <Card title="Discharge handout" right={<span className="discharge-card-context">PATIENT-FACING SUMMARY</span>}>
+            <div className="discharge-handout-head"><div><div className="discharge-section-eyebrow">AFTER YOUR HOSPITAL STAY</div><h2>Care instructions</h2><p>Review the information below with the patient before discharge.</p></div><span className={"discharge-verified-pill " + (ins.verified ? "verified" : "unverified")}>{ins.verified ? "✓ Record-verified slots" : "⚠ Verification needed"}</span></div>
+            <pre className="discharge-handout-text">{ins.text}</pre>
+            <div className="discharge-source-note"><span>ⓘ</span><div><b>{ins.source === "llm" ? "LLM phrasing · record-filled slots" : "Fixed template · no LLM key"}</b><p>The LLM only phrases placeholder text. Code fills {Object.keys(ins.slots_used).join(", ") || "—"} from the patient record; it does not write drug names, dates, doses or numbers. {ins.note}</p></div></div>
+            <div className="discharge-language-row"><div><b>Language</b><small>Choose a patient-facing language</small></div><select value={regionalLang} onChange={(e) => setRegionalLang(e.target.value)} className="discharge-language-select">{LANGUAGES.map((lang) => <option key={lang.value} value={lang.value}>{lang.label}</option>)}</select>
+              {regional && <span className={"discharge-verified-pill " + (regional.verified ? "verified" : "unverified")}>{regional.verified ? "✓ Verified" : "⚠ Unverified"}</span>}</div>
+            {regional && <><pre className="discharge-handout-text regional">{regional.text}</pre>{regional.needs_native_review && <div className="discharge-review-note">Native-speaker review is still pending for this language template.</div>}
+              <details className="discharge-back-translation"><summary>View back-translation</summary><p>{regional.back_translation}</p><small>Readability aid only — not clinically verified. {regional.note}</small></details></>}
+          </Card>
+          {d.intervention && <Card title="Matched follow-up intervention" right={<AssumptionTag />}><div className="discharge-intervention"><div><b>{d.intervention.name}</b><p>Suggested window: day {d.intervention.window_start_day}–{d.intervention.window_end_day}</p></div><strong>{d.intervention.minutes}<small>min</small></strong></div></Card>}
+        </> : <>
+          <Card title="Post-discharge check-in agent" right={<span className="discharge-card-context">SIMULATED CONVERSATION</span>}>
+            <div className="discharge-agent-note"><span>ⓘ</span><p>This simulation identifies barriers and routes them to the care team. The agent does not change medication, provide doses or give medical advice.</p></div>
+            <div className="discharge-chat-window">
+              {chat.length === 0 && <div className="discharge-chat-empty"><div>◌</div><b>Start a patient check-in</b><p>Try: “I skipped my dose because it costs too much” or “Can I double my insulin dose?”</p></div>}
+              {chat.map((message, i) => <div key={i} className={"discharge-chat-message " + (message.role === "patient" ? "patient" : "agent")}>{message.role === "agent" && message.barrier && <div className="discharge-barrier-tag">BARRIER · {message.barrier}{message.escalationId ? " · ESCALATION #" + message.escalationId : ""}</div>}{message.text}</div>)}
+              {chatBusy && <div className="discharge-agent-typing"><i /><i /><i /> Agent is responding…</div>}
             </div>
-            <div className="bg-slate-50 border border-slate-200 rounded p-3 h-64 overflow-y-auto space-y-2">
-              {chat.length === 0 && (
-                <div className="text-xs text-slate-400">
-                  Try: "I skipped my dose because it costs too much" or "can I
-                  double my insulin dose?"
-                </div>
-              )}
-              {chat.map((m, i) => (
-                <div
-                  key={i}
-                  className={`text-sm rounded px-3 py-2 max-w-[85%] ${
-                    m.role === "patient"
-                      ? "bg-sky-100 text-sky-900 ml-auto"
-                      : "bg-white border border-slate-200 text-slate-800"
-                  }`}
-                >
-                  {m.role === "agent" && m.barrier && (
-                    <div className="text-[10px] text-slate-500 mb-1">
-                      barrier: {m.barrier}
-                      {m.escalationId ? ` · escalation #${m.escalationId}` : ""}
-                    </div>
-                  )}
-                  {m.text}
-                </div>
-              ))}
-              {chatBusy && (
-                <div className="text-xs text-slate-400 animate-pulse">
-                  agent thinking…
-                </div>
-              )}
-            </div>
-            <div className="flex gap-2">
-              <input
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && sendChat()}
-                placeholder="Type as the patient…"
-                className="flex-1 text-sm border border-slate-300 rounded px-3 py-2"
-              />
-              <button
-                onClick={sendChat}
-                disabled={chatBusy || !chatInput.trim()}
-                className="px-4 py-2 rounded-md bg-teal-700 text-white text-sm disabled:opacity-40"
-              >
-                Send
-              </button>
-            </div>
-
-            {/* escalation queue for this page */}
-            <Card title="Clinician escalation queue">
-              {escalations.length === 0 ? (
-                <div className="text-sm text-slate-500">No escalations yet.</div>
-              ) : (
-                <ul className="text-sm space-y-2">
-                  {escalations.map((e) => (
-                    <li
-                      key={e.id}
-                      className="border border-slate-200 rounded p-2"
-                    >
-                      <div className="flex justify-between">
-                        <span className="font-mono text-xs text-slate-500">
-                          #{e.id} patient #{e.patient_nbr}
-                        </span>
-                        <StatusChip status={e.status} />
-                      </div>
-                      <div className="text-xs text-slate-600 mt-1">
-                        barrier: <b>{e.barrier}</b> · "{e.message}"
-                      </div>
-                      {e.status === "Pending" && role === "clinician" && (
-                        <div className="flex gap-2 mt-2">
-                          <button
-                            onClick={() => decideEscalation(e.id, "approve")}
-                            className="px-2 py-1 rounded text-xs bg-emerald-600 text-white"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => decideEscalation(e.id, "reject")}
-                            className="px-2 py-1 rounded text-xs bg-rose-600 text-white"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                      {e.status === "Pending" && role !== "clinician" && (
-                        <div className="text-xs text-amber-700 mt-1">
-                          clinician only
-                        </div>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Card>
-          </div>
-        )}
-      </Card>
-
-      <Card
-        title="Follow-up tasks"
-        right={
-          <span className="text-xs text-slate-500">
-            role: <b className="capitalize">{role}</b>
-          </span>
-        }
-      >
-        {!d ? (
-          <Spinner />
-        ) : d.tasks.length ? (
-          <table className="compact w-full text-sm">
-            <thead>
-              <tr className="text-left text-[11px] uppercase text-slate-500 border-b border-slate-200">
-                <th className="py-1">Task</th>
-                <th>Due</th>
-                <th>Status</th>
-                <th>Change to</th>
-              </tr>
-            </thead>
-            <tbody>
-              {d.tasks.map((t) => (
-                <tr key={t.id} className="border-b border-slate-100">
-                  <td>{t.title}</td>
-                  <td className="text-slate-600">{t.due_date}</td>
-                  <td>
-                    <StatusChip status={t.status} />
-                  </td>
-                  <td>
-                    <select
-                      value={t.status}
-                      onChange={(e) => patchTask(t.id, e.target.value)}
-                      className="text-xs border border-slate-300 rounded px-1 py-1"
-                    >
-                      {TASK_STATUSES.map((s) => (
-                        <option key={s}>{s}</option>
-                      ))}
-                    </select>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <div className="text-sm text-slate-500">
-            No tasks yet — approve a plan on the patient page first.
-          </div>
-        )}
-        {d?.intervention && (
-          <div className="text-[11px] text-slate-500 mt-2">
-            Matched intervention: <b>{d.intervention.name}</b> (days{" "}
-            {d.intervention.window_start_day}–{d.intervention.window_end_day},{" "}
-            {d.intervention.minutes} min) <AssumptionTag />
-          </div>
-        )}
-      </Card>
+            <div className="discharge-chat-compose"><input value={chatInput} onChange={(e) => setChatInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendChat()} placeholder="Type a message as the patient…" /><button onClick={sendChat} disabled={chatBusy || !chatInput.trim()}>Send <span>↑</span></button></div>
+          </Card>
+          <Card title="Clinician escalation queue" right={<span className="discharge-card-context">{escalations.length} TOTAL</span>}>
+            {escalations.length === 0 ? <div className="discharge-empty">No escalations yet. Patient barriers identified during check-in will appear here.</div> : <div className="discharge-escalations">{escalations.map((e) => <div className="discharge-escalation-row" key={e.id}>
+              <div className="discharge-escalation-top"><b>Escalation #{e.id} · Patient #{e.patient_nbr}</b><StatusChip status={e.status} /></div><p><b>{e.barrier}</b> · “{e.message}”</p>
+              {e.status === "Pending" && (role === "clinician" ? <div className="discharge-decision-actions"><button onClick={() => decideEscalation(e.id, "approve")}>Approve</button><button onClick={() => decideEscalation(e.id, "reject")}>Reject</button></div> : <small>Clinician review required</small>)}
+            </div>)}</div>}
+          </Card>
+        </>}
+      </div>
     </div>
-  );
+
+    <Card title="Follow-up task timeline" right={<span className="discharge-card-context">ROLE · {role.toUpperCase()}</span>}>
+      <div className="discharge-timeline-intro"><p>Track the planned care touchpoints after discharge. Status changes are recorded in the audit log.</p>{d?.demo_date && <span>Demo date · {d.demo_date}</span>}</div>
+      {!d ? <Spinner /> : <div className="discharge-task-list">
+        {!d.tasks?.length ? <div className="discharge-empty">No follow-up tasks yet. Approve a care plan on the patient page first.</div> : d.tasks.map((task, index) => {
+          const future = Boolean(task.due_date && d.demo_date && task.due_date > d.demo_date);
+          return <div className="discharge-task-row" key={task.id}>
+            <div className="discharge-task-marker"><span>{index + 1}</span></div>
+            <div className="discharge-task-main"><div className="discharge-task-title">{task.title}</div><div className="discharge-task-meta"><span>{task.due_date || "Date not set"}</span>{future && <span className="discharge-future-tag">Upcoming</span>}</div></div>
+            <div className="discharge-task-state"><StatusChip status={task.status} /></div>
+            <select aria-label={"Update status for " + task.title} value={task.status} onChange={(e) => patchTask(task.id, e.target.value)} className="discharge-task-select">{TASK_STATUSES.map((status) => <option key={status} value={status} disabled={future && status === "Done"}>{status}</option>)}</select>
+          </div>;
+        })}
+      </div>}
+      {d?.intervention && <div className="discharge-task-assumption">Tasks are matched to <b>{d.intervention.name}</b> · {d.intervention.minutes} minutes <AssumptionTag /></div>}
+    </Card>
+  </div>;
 }
