@@ -23,15 +23,35 @@ function RiskMeter({ value }) {
 }
 
 function ComparisonBar({ label, care, risk, format = (n) => String(n) }) {
-  const max = Math.max(Number(care) || 0, Number(risk) || 0, .0001);
-  return <div className="comparison-row">
-    <div className="comparison-label">{label}</div>
-    <div className="comparison-track-group">
-      <div className="comparison-track care"><span style={{ width: `${Math.max(0, Number(care) || 0) / max * 100}%` }} /></div>
-      <div className="comparison-track risk"><span style={{ width: `${Math.max(0, Number(risk) || 0) / max * 100}%` }} /></div>
+  const careValue = Math.max(0, Number(care) || 0);
+  const riskValue = Math.max(0, Number(risk) || 0);
+  const max = Math.max(careValue, riskValue, 0.0001);
+  const rows = [
+    { name: "CareTrace", value: careValue, color: "#0F766E" },
+    { name: "Risk-only", value: riskValue, color: "#94A3B8" },
+  ];
+
+  return (
+    <div style={{ display: "grid", gap: 9 }}>
+      <div style={{ color: "#334155", fontSize: 12, fontWeight: 600 }}>{label}</div>
+      {rows.map((row) => {
+        const width = row.value > 0 ? Math.max(2, row.value / max * 100) : 0;
+        return (
+          <div key={row.name} style={{ display: "grid", gridTemplateColumns: "78px minmax(0,1fr)", alignItems: "center", gap: 10 }}>
+            <span style={{ color: "#475569", fontSize: 11, whiteSpace: "nowrap" }}>{row.name}</span>
+            <div style={{ position: "relative", height: 13, paddingRight: 48 }}>
+              <div style={{ position: "absolute", inset: "2px 48px 2px 0", borderRadius: 999, background: "#F1F5F9" }}>
+                <span style={{ display: "block", width: width + "%", height: "100%", borderRadius: 999, background: row.color }} />
+              </div>
+              <strong style={{ position: "absolute", left: "calc(" + width + "% + 7px)", top: -3, color: "#334155", fontSize: 11, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
+                {format(row.value)}
+              </strong>
+            </div>
+          </div>
+        );
+      })}
     </div>
-    <div className="comparison-values"><strong>{format(care)}</strong><span>{format(risk)}</span></div>
-  </div>;
+  );
 }
 
 function policyValue(comparison, name, field) {
@@ -67,8 +87,9 @@ export default function Worklist({ role, onOpenPatient }) {
     const careAvoided = policyValue(comparison, "caretrace", "expected_avoided_readmissions");
     const riskAvoided = policyValue(comparison, "risk-only", "expected_avoided_readmissions");
     const used = (data.selection || []).reduce((sum, row) => sum + (Number(row.minutes) || 0), 0);
-    const lift = riskAvoided > 0 ? ((careAvoided - riskAvoided) / riskAvoided) * 100 : null;
-    return { careCalls, riskCalls, careReached, riskReached, careAvoided, riskAvoided, used, lift };
+    const avoidedDelta = careAvoided - riskAvoided;
+    const lift = riskAvoided > 0 ? (avoidedDelta / riskAvoided) * 100 : null;
+    return { careCalls, riskCalls, careReached, riskReached, careAvoided, riskAvoided, avoidedDelta, used, lift };
   }, [data]);
 
   return (
@@ -77,12 +98,21 @@ export default function Worklist({ role, onOpenPatient }) {
 
       {!data ? <Spinner label="Loading worklist…" /> : (
         <>
-          <div className="worklist-hero-grid">
+          <div className="worklist-hero-grid" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
             <Card title="Why not just call the sickest?" className="worklist-hero-card">
-              <div className="hero-metric-heading">Expected avoided readmissions</div>
-              <div className="hero-metric-line">
+              <div className="hero-metric-heading">Expected avoided readmissions today</div>
+              <div className="hero-metric-line" style={{ marginBottom: 8 }}>
                 <div className="hero-number">{metrics.careAvoided.toFixed(2)}</div>
-                {metrics.lift !== null && <DeltaPill value={metrics.lift} suffix="% vs risk-only" />}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 9, marginBottom: 22 }}>
+                <span style={{ color: "#475569", fontSize: 13 }}>
+                  Risk-only list: <strong style={{ color: "#334155", fontVariantNumeric: "tabular-nums" }}>{metrics.riskAvoided.toFixed(2)}</strong>
+                </span>
+                <span className={`delta-pill ${metrics.avoidedDelta > 0 ? "positive" : metrics.avoidedDelta < 0 ? "negative" : "neutral"}`}>
+                  <span aria-hidden="true">{metrics.avoidedDelta > 0 ? "↑" : metrics.avoidedDelta < 0 ? "↓" : "—"}</span>
+                  {metrics.avoidedDelta > 0 ? "+" : metrics.avoidedDelta < 0 ? "−" : ""}{Math.abs(metrics.avoidedDelta).toFixed(2)} absolute difference
+                </span>
+                {metrics.lift !== null && <span style={{ color: "#64748B", fontSize: 11 }}>({metrics.lift >= 0 ? "+" : ""}{metrics.lift.toFixed(1)}%)</span>}
               </div>
               <div className="comparison-legend">
                 <span><i className="legend-swatch care" />CareTrace</span>
@@ -96,16 +126,6 @@ export default function Worklist({ role, onOpenPatient }) {
               <p className="worklist-footnote">Reached uses held-out readmission outcomes. Avoided estimates use assumed intervention effects.</p>
             </Card>
 
-            <div className="worklist-insight-card">
-              <div className="insight-kicker">200-day replay context</div>
-              <div className="insight-number">{metrics.lift === null ? "—" : `${metrics.lift >= 0 ? "+" : ""}${metrics.lift.toFixed(1)}%`}</div>
-              <p>{metrics.lift === null
-                ? "A risk-only comparison is not available for this budget."
-                : `CareTrace's estimated avoided readmissions are ${Math.abs(metrics.lift).toFixed(1)}% ${metrics.lift >= 0 ? "higher" : "lower"} than the risk-only list for this worklist budget.`}</p>
-              <span className="insight-assumption">ⓘ Based on assumed effects</span>
-              <div className="insight-orb insight-orb-one" />
-              <div className="insight-orb insight-orb-two" />
-            </div>
           </div>
 
           <div className="worklist-kpis">
