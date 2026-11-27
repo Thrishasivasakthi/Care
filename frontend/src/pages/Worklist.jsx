@@ -124,7 +124,8 @@ export default function Worklist({ role, onOpenPatient, demoStep = null }) {
   const previousSelected = useRef(new Set());
   const hasRenderedSelection = useRef(false);
   const [rankMovements, setRankMovements] = useState({});
-  const [enteredIds, setEnteredIds] = useState([]);\n  const autoOpenedDemoPatient = useRef(false);
+  const [enteredIds, setEnteredIds] = useState([]);
+  const autoOpenedDemoPatient = useRef(false);\n  const autoOpenedDemoPatient = useRef(false);
 
   const load = useCallback((h) => {
     api(`/worklist?hours=${h}`)
@@ -145,6 +146,17 @@ export default function Worklist({ role, onOpenPatient, demoStep = null }) {
   useEffect(() => {
     load(hours);
   }, [hours, load]);
+
+  useEffect(() => {
+    if (demoStep === 0) setHours(4);
+    if (demoStep === 1 || demoStep === 2) setHours(2);
+  }, [demoStep]);
+
+  useEffect(() => {
+    if (demoStep !== 2 || Number(data?.budget_minutes) !== 120 || !data?.ranking?.length || autoOpenedDemoPatient.current) return;
+    autoOpenedDemoPatient.current = true;
+    onOpenPatient(data.ranking[0].patient_id);
+  }, [demoStep, data, onOpenPatient]);
 
 
   useLayoutEffect(() => {
