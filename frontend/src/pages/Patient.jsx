@@ -290,7 +290,7 @@ export default function Patient({ patientId, role, onBack }) {
       </section>
 
       <div className="patient-grid">
-        <section className="patient-panel">
+        <section className="patient-panel" data-demo-target="patient-drivers">
           <div className="patient-panel-heading">
             <div><span className="patient-eyebrow">MODEL EXPLANATION</span><h2>Why this risk?</h2></div>
             <span className="patient-muted">SHAP concepts</span>
