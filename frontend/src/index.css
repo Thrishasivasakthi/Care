@@ -665,3 +665,44 @@ button:disabled { transform:none !important; }
   .care-loading-spinner { border-top-color:#0F766E; }
 }
 
+
+
+/* Step 6 — printable discharge handout and accessible workspace refinements */
+.discharge-patient-number { color:#1E293B; font-size:13px; }
+.discharge-patient-id { color:#334155; font-size:13px; }
+.discharge-workflow-item { color:#334155; }
+.discharge-workflow-item b { color:#1E293B; font-size:13px; }
+.discharge-workflow-item small { color:#475569; font-size:13px; }
+.discharge-panel-label,.discharge-field-label { color:#475569; font-size:11px; }
+.discharge-print-button { padding:8px 12px; border:1px solid #BFDCD5; border-radius:10px; background:#EFF8F6; color:#0B514C; font-size:12px; font-weight:750; }
+.discharge-print-button:hover { background:#DDF1EC; }
+.discharge-language-tabs { display:flex; flex-wrap:wrap; gap:6px; }
+.discharge-language-tabs button { min-height:35px; padding:0 12px; border:1px solid #DCE4E9; border-radius:9px; background:#FFFFFF; color:#334155; font-size:12px; font-weight:650; }
+.discharge-language-tabs button.active { border-color:#0F766E; background:#EAF5F2; color:#0B514C; }
+.discharge-printable { margin-top:14px; padding:30px; border:1px solid #E2E8F0; border-radius:18px; background:#FFFFFF; color:#1E293B; box-shadow:0 8px 25px rgba(15,23,42,.07); font-family:Inter,ui-sans-serif,system-ui,sans-serif; font-size:16px; line-height:1.65; }
+.discharge-paper-header { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; }
+.discharge-paper-kicker { color:#0F766E; font-size:11px; font-weight:800; letter-spacing:.1em; }
+.discharge-paper-header h2 { margin:7px 0 2px; color:#0B2545; font-size:20px; font-weight:800; }
+.discharge-paper-header p { margin:0; color:#475569; font-size:13px; }
+.discharge-paper-rule { height:2px; margin:18px 0 20px; background:#DCE9E7; }
+.discharge-printable h3 { margin:0 0 16px; color:#0B2545; font-size:22px; font-weight:800; }
+.discharge-paper-steps { display:flex; flex-direction:column; gap:13px; margin:0; padding:0; list-style:none; }
+.discharge-paper-steps li { display:grid; grid-template-columns:27px minmax(0,1fr); gap:11px; align-items:start; }
+.discharge-paper-steps li > span { display:grid; width:25px; height:25px; place-items:center; border-radius:50%; background:#DDF2ED; color:#0F766E; font-size:12px; font-weight:800; }
+.discharge-paper-steps p,.discharge-paper-help p { margin:0; color:#334155; font-size:16px; line-height:1.65; }
+.discharge-paper-help { margin-top:19px; padding:14px 16px; border:1px solid #FECACA; border-radius:13px; background:#FFF1F2; }
+.discharge-paper-help strong { display:block; margin-bottom:5px; color:#991B1B; font-size:14px; }
+.discharge-paper-help p { color:#7F1D1D; }
+.discharge-paper-verification { margin-top:20px; padding-top:12px; border-top:1px solid #E8EDF1; color:#475569; font-size:12px; }
+.discharge-paper-footer { margin-top:24px; padding-top:12px; border-top:1px solid #E8EDF1; color:#475569; font-size:12px; text-align:center; }
+@media print {
+  @page { size:A4; margin:16mm; }
+  body * { visibility:hidden !important; }
+  .discharge-printable,.discharge-printable * { visibility:visible !important; }
+  .discharge-printable { position:absolute !important; left:0 !important; top:0 !important; width:100% !important; margin:0 !important; padding:0 !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; font-size:16px !important; }
+  .discharge-paper-steps p,.discharge-paper-help p { font-size:16px !important; }
+}
+@media(max-width:560px) {
+  .discharge-printable { padding:18px; }
+  .discharge-paper-header { flex-direction:column; }
+}
