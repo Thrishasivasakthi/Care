@@ -571,3 +571,96 @@ input:not([type="range"]), select, textarea { border-color: #CBD5E1; border-radi
 @media (max-width: 900px) { .duel-patient-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .duel-results-layout { grid-template-columns:minmax(0,1fr); } }
 @media (max-width: 620px) { .duel-heading-row { align-items:flex-start; flex-direction:column; } .duel-budget-controls { align-items:stretch; flex-direction:column; gap:15px; } .duel-budget-numbers { justify-content:space-between; } .duel-patient-grid { grid-template-columns:minmax(0,1fr); } .duel-action-bar { align-items:stretch; flex-direction:column; } .duel-action-buttons { justify-content:flex-end; } }
 @media (max-width: 390px) { .duel-budget-numbers { gap:10px; } .duel-budget-numbers strong { font-size:17px; } .duel-selection-header { align-items:flex-start; flex-direction:column; } }
+
+
+/* Step 6 — final visual and accessibility polish */
+:root { --focus-ring: 0 0 0 3px rgba(15,118,110,.16); }
+html { scroll-behavior: smooth; }
+::selection { color:#0B2545; background:#CDEBE4; }
+button, a, input, select, textarea, summary { -webkit-tap-highlight-color:transparent; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, summary:focus-visible, [tabindex="0"]:focus-visible {
+  outline:2px solid #0F766E;
+  outline-offset:3px;
+  box-shadow:var(--focus-ring);
+}
+button:disabled { transform:none !important; }
+.page-content > * { animation:care-page-enter .24s ease both; }
+@keyframes care-page-enter {
+  from { opacity:0; transform:translateY(5px); }
+  to { opacity:1; transform:translateY(0); }
+}
+.care-loading-state {
+  display:flex; min-height:132px; align-items:center; justify-content:center; gap:11px;
+  padding:24px; border:1px solid #E2E8F0; border-radius:18px; background:#FFFFFF;
+  color:#475569; font-size:12px; font-weight:600;
+}
+.care-loading-spinner {
+  width:19px; height:19px; flex:0 0 19px; border:2px solid #DCEBE8;
+  border-top-color:#0F766E; border-radius:50%; animation:care-spin .72s linear infinite;
+}
+@keyframes care-spin { to { transform:rotate(360deg); } }
+.care-empty-state {
+  padding:30px 18px; border:1px dashed #CBD5E1; border-radius:16px;
+  background:linear-gradient(180deg,#FFFFFF,#F8FAFC); color:#334155; text-align:center;
+}
+.care-empty-state-mark {
+  display:grid; width:34px; height:34px; place-items:center; margin:0 auto 11px;
+  border-radius:11px; background:#E6F4F1; color:#0F766E; font-size:19px; font-weight:700;
+}
+.care-skeleton {
+  display:grid; gap:13px; padding:20px; border:1px solid #E2E8F0;
+  border-radius:17px; background:#FFFFFF;
+}
+.care-skeleton-line {
+  position:relative; height:11px; overflow:hidden; border-radius:999px;
+  background:#EDF1F5;
+}
+.care-skeleton-line::after {
+  position:absolute; inset:0; content:""; transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);
+  animation:care-shimmer 1.35s ease-in-out infinite;
+}
+.care-skeleton-line.short { width:34%; }
+.care-skeleton-line.medium { width:68%; }
+.care-skeleton-line.full { width:100%; }
+@keyframes care-shimmer { to { transform:translateX(100%); } }
+.page-content .text-slate-400 { color:#64748B !important; }
+.page-content [class*="text-slate-"], .page-content [class*="text-gray-"] { text-wrap:pretty; }
+.page-content button:not(:disabled):active { transform:translateY(0) scale(.985); }
+.page-content a { text-underline-offset:3px; }
+.page-content table th { font-weight:700; }
+.page-content table td { color:#334155; }
+.page-content input::placeholder, .page-content textarea::placeholder { color:#64748B; opacity:1; }
+.page-content select:disabled, .page-content input:disabled, .page-content textarea:disabled { color:#64748B; background:#F1F5F9; }
+.page-content .overflow-x-auto { max-width:100%; overscroll-behavior-x:contain; }
+.discharge-empty { color:#475569; background:#FAFCFD; }
+.discharge-chat-empty p, .discharge-timeline-intro span, .duel-result-note { color:#64748B; }
+.duel-action-hint, .duel-progress-caption { color:#475569; }
+.duel-age, .duel-driver-label, .duel-action-row small { color:#64748B; }
+.duel-patient-card.over-budget { opacity:.58; filter:saturate(.35); }
+.duel-patient-card:disabled { cursor:not-allowed; }
+@media (max-width:1024px) {
+  .page-content { padding-left:24px; padding-right:24px; }
+  .worklist-hero-grid { grid-template-columns:minmax(0,1.6fr) minmax(235px,1fr); }
+  .duel-patient-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .duel-results-layout { grid-template-columns:minmax(0,1fr); }
+  .discharge-workspace { grid-template-columns: minmax(215px, .72fr) minmax(0, 1.5fr); }
+  .discharge-task-row { grid-template-columns:26px minmax(0,1fr) auto; }
+  .discharge-task-select { grid-column:2 / -1; width:145px; margin:0 0 10px; }
+}
+@media (max-width:760px) {
+  .page-content { padding-left:16px; padding-right:16px; }
+  .worklist-hero-grid { grid-template-columns:minmax(0,1fr); }
+  .care-loading-state { min-height:112px; }
+  .app-footer { font-size:10px; }
+}
+@media (max-width:440px) {
+  .care-empty-state { padding:24px 14px; }
+  .care-skeleton { padding:16px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  html { scroll-behavior:auto; }
+  .page-content > *, .care-loading-spinner, .care-skeleton-line::after { animation:none !important; }
+  .care-loading-spinner { border-top-color:#0F766E; }
+}
