@@ -484,3 +484,90 @@ input:not([type="range"]), select, textarea { border-color: #CBD5E1; border-radi
 @media (max-width: 980px) { .discharge-workspace { grid-template-columns:230px minmax(0,1fr); } .discharge-task-row { grid-template-columns:26px minmax(0,1fr) auto; } .discharge-task-select { grid-column:2 / -1; width:145px; margin:0 0 10px; } }
 @media (max-width: 720px) { .discharge-workspace { grid-template-columns:minmax(0,1fr); } .discharge-patient-panel { position:static; } .discharge-panel-foot { margin-top:13px; } .discharge-handout-head { flex-direction:column; } .discharge-language-row { flex-wrap:wrap; } .discharge-language-row > div { flex:1 1 100%; } .discharge-timeline-intro { align-items:flex-start; flex-direction:column; } }
 @media (max-width: 440px) { .discharge-task-row { grid-template-columns:24px minmax(0,1fr); gap:8px; padding:10px 0; } .discharge-task-state { grid-column:2; } .discharge-task-select { grid-column:2; width:100%; margin:0; } .discharge-handout-text { padding:14px; font-size:11px; } .discharge-chat-message { max-width:94%; } .discharge-intervention > strong { font-size:22px; } }
+
+/* Step 5 — Strategy Duel */
+.duel-page { display:flex; flex-direction:column; gap:19px; min-width:0; }
+.duel-heading-row { display:flex; align-items:flex-end; justify-content:space-between; gap:18px; }
+.duel-eyebrow { color:#0F766E; font-size:9px; font-weight:800; letter-spacing:.13em; }
+.duel-heading-row h2 { margin:6px 0 5px; color:#0B2545; font-size:27px; font-weight:700; letter-spacing:-.045em; }
+.duel-heading-row p { margin:0; color:#64748B; font-size:12px; line-height:1.55; }
+.duel-patient-count { display:flex; align-items:center; gap:9px; padding:10px 14px; border:1px solid #DCE8E6; border-radius:14px; background:#F5FAF9; color:#64748B; font-size:10px; white-space:nowrap; }
+.duel-patient-count strong { color:#0F766E; font-size:22px; font-variant-numeric:tabular-nums; }
+.duel-live-label { display:inline-flex; align-items:center; gap:6px; color:#0F766E; font-size:9px; font-weight:800; letter-spacing:.08em; }
+.duel-live-label i { width:6px; height:6px; border-radius:50%; background:#0F9F6E; box-shadow:0 0 0 3px #DDF4E9; }
+.duel-budget-controls { display:flex; align-items:flex-end; justify-content:space-between; gap:20px; }
+.duel-budget-controls label { display:block; margin-bottom:7px; color:#64748B; font-size:10px; font-weight:700; }
+.duel-budget-select { min-width:170px; min-height:39px; padding:0 12px; border:1px solid #DCE4E9; border-radius:11px; background:#FFFFFF; color:#334155; font-size:11px; outline:none; }
+.duel-budget-select:focus { border-color:#0F766E; box-shadow:0 0 0 3px rgba(15,118,110,.11); }
+.duel-budget-numbers { display:flex; align-items:center; gap:clamp(14px,3vw,38px); }
+.duel-budget-numbers > div { display:flex; flex-direction:column; gap:4px; }
+.duel-budget-numbers span { color:#94A3B8; font-size:9px; font-weight:600; }
+.duel-budget-numbers strong { color:#0F172A; font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; }
+.duel-budget-numbers strong small { color:#94A3B8; font-size:10px; font-weight:500; }
+.duel-progress-track { height:9px; overflow:hidden; margin-top:19px; border-radius:999px; background:#EDF1F4; }
+.duel-progress-fill { height:100%; border-radius:999px; transition:width .25s ease,background .2s ease; }
+.duel-progress-fill.safe { background:repeating-linear-gradient(135deg,#0F766E 0 5px,#17877D 5px 9px); }
+.duel-progress-fill.warning { background:repeating-linear-gradient(135deg,#D97706 0 5px,#F0A33A 5px 9px); }
+.duel-progress-fill.danger { background:repeating-linear-gradient(135deg,#DC2626 0 5px,#F16A62 5px 9px); }
+.duel-progress-caption { display:flex; justify-content:space-between; gap:10px; margin-top:7px; color:#94A3B8; font-size:9px; }
+.duel-budget-state { font-weight:800; }
+.duel-budget-state.safe { color:#0F766E; }
+.duel-budget-state.warning { color:#B45309; }
+.duel-budget-state.danger { color:#B91C1C; }
+.duel-selection-header { display:flex; align-items:flex-end; justify-content:space-between; gap:12px; }
+.duel-selection-header h3 { margin:0; color:#0B2545; font-size:17px; font-weight:700; letter-spacing:-.025em; }
+.duel-selection-header p { margin:5px 0 0; color:#64748B; font-size:10px; }
+.duel-selection-header > span { padding:6px 10px; border-radius:999px; background:#E6F4F1; color:#0F766E; font-size:9px; font-weight:800; white-space:nowrap; }
+.duel-patient-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.duel-patient-card { display:flex; min-width:0; min-height:183px; flex-direction:column; padding:15px; border:1px solid #E1E8ED; border-radius:17px; background:#FFFFFF; color:#334155; text-align:left; box-shadow:0 1px 2px rgba(15,23,42,.025); transition:transform .17s,border-color .17s,box-shadow .17s,background .17s; }
+.duel-patient-card:not(:disabled):hover { transform:translateY(-2px); border-color:#9BCFC4; box-shadow:0 8px 20px rgba(15,23,42,.07); }
+.duel-patient-card:focus-visible { outline:2px solid #0F766E; outline-offset:3px; }
+.duel-patient-card.selected { border:1.5px solid #0F766E; background:linear-gradient(155deg,#F1FAF8,#EAF6F2); box-shadow:0 0 0 2px rgba(15,118,110,.07); }
+.duel-patient-card.over-budget { opacity:.43; cursor:not-allowed; filter:saturate(.45); }
+.duel-patient-card-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.duel-patient-id { color:#64748B; font-size:9px; font-weight:800; letter-spacing:.06em; }
+.duel-age { color:#94A3B8; font-size:10px; }
+.duel-driver-label { margin-top:15px; color:#94A3B8; font-size:8px; font-weight:800; letter-spacing:.08em; }
+.duel-drivers { display:flex; flex-wrap:wrap; gap:5px; margin-top:7px; }
+.duel-drivers span { max-width:100%; overflow:hidden; padding:5px 7px; border:1px solid #E8EDF1; border-radius:7px; background:#F8FAFC; color:#475569; font-size:9px; line-height:1.2; text-overflow:ellipsis; white-space:nowrap; }
+.duel-action-row { display:flex; align-items:center; justify-content:space-between; gap:9px; margin-top:auto; padding-top:13px; }
+.duel-action-row > div:first-child { display:flex; min-width:0; flex-direction:column; gap:4px; }
+.duel-action-row small { color:#94A3B8; font-size:7px; font-weight:800; letter-spacing:.07em; }
+.duel-action-row b { overflow:hidden; color:#0F766E; font-size:10px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+.duel-minutes { flex:0 0 auto; color:#0B2545; font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; }
+.duel-minutes small { margin-left:3px; color:#94A3B8; font-size:9px; font-weight:500; }
+.duel-card-select-state { display:flex; align-items:center; gap:5px; margin-top:11px; padding-top:9px; border-top:1px solid rgba(148,163,184,.17); color:#94A3B8; font-size:9px; font-weight:600; }
+.duel-patient-card.selected .duel-card-select-state { color:#0F766E; }
+.duel-patient-card.selected .duel-card-select-state span { display:grid; width:15px; height:15px; place-items:center; border-radius:50%; background:#0F766E; color:#FFFFFF; font-size:9px; }
+.duel-action-bar { display:flex; align-items:center; justify-content:space-between; gap:14px; padding:13px 15px; border:1px solid #E3E9ED; border-radius:15px; background:rgba(255,255,255,.8); }
+.duel-action-hint { color:#64748B; font-size:10px; }
+.duel-action-buttons { display:flex; align-items:center; gap:8px; }
+.duel-reset-button,.duel-reveal-button { min-height:37px; padding:0 14px; border-radius:10px; font-size:10px; font-weight:700; }
+.duel-reset-button { border:1px solid #DCE4E9; background:#FFFFFF; color:#475569; }
+.duel-reset-button:hover { background:#F1F5F9; }
+.duel-reveal-button { background:#0B2545; color:#FFFFFF; box-shadow:0 3px 8px rgba(11,37,69,.14); }
+.duel-reveal-button:hover:not(:disabled) { background:#12365F; transform:translateY(-1px); }
+.duel-reveal-button:disabled { opacity:.42; cursor:not-allowed; }
+.duel-reveal-button span { margin-left:7px; }
+.duel-result-banner { display:flex; align-items:center; gap:13px; padding:16px 18px; border:1px solid #CDE5E0; border-radius:16px; background:linear-gradient(110deg,#F0F9F6,#FFFFFF); }
+.duel-result-icon { display:grid; flex:0 0 38px; width:38px; height:38px; place-items:center; border-radius:12px; background:#DDF2EB; color:#0F766E; font-size:19px; }
+.duel-result-banner strong { display:block; margin-top:5px; color:#164E48; font-size:13px; line-height:1.5; }
+.duel-result-legend { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px; }
+.duel-result-legend span { display:inline-flex; align-items:center; gap:6px; padding:6px 9px; border:1px solid #E8EDF2; border-radius:999px; color:#475569; font-size:9px; font-weight:600; }
+.duel-result-legend i { width:8px; height:8px; border-radius:3px; }
+.duel-results-layout { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:20px; align-items:center; }
+.duel-result-chart { min-width:0; }
+.duel-result-table-wrap { min-width:0; overflow-x:auto; }
+.duel-result-table { width:100%; border-collapse:collapse; font-size:10px; }
+.duel-result-table th { padding:10px 7px; border-bottom:1px solid #E5EAF0; color:#94A3B8; text-align:right; font-size:8px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; white-space:nowrap; }
+.duel-result-table th:first-child,.duel-result-table td:first-child { text-align:left; }
+.duel-result-table td { padding:12px 7px; border-bottom:1px solid #F0F2F5; color:#475569; text-align:right; white-space:nowrap; }
+.duel-result-table td:first-child { color:#334155; font-weight:700; text-transform:capitalize; }
+.duel-strategy-dot { display:inline-block; width:7px; height:7px; margin-right:6px; border-radius:2px; vertical-align:middle; }
+.duel-strategy-dot.human { background:#64748b; }
+.duel-strategy-dot.risk_only { background:#2563eb; }
+.duel-strategy-dot.caretrace { background:#0f766e; }
+.duel-result-note { margin:11px 0 0; color:#94A3B8; font-size:9px; line-height:1.55; }
+@media (max-width: 900px) { .duel-patient-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .duel-results-layout { grid-template-columns:minmax(0,1fr); } }
+@media (max-width: 620px) { .duel-heading-row { align-items:flex-start; flex-direction:column; } .duel-budget-controls { align-items:stretch; flex-direction:column; gap:15px; } .duel-budget-numbers { justify-content:space-between; } .duel-patient-grid { grid-template-columns:minmax(0,1fr); } .duel-action-bar { align-items:stretch; flex-direction:column; } .duel-action-buttons { justify-content:flex-end; } }
+@media (max-width: 390px) { .duel-budget-numbers { gap:10px; } .duel-budget-numbers strong { font-size:17px; } .duel-selection-header { align-items:flex-start; flex-direction:column; } }
