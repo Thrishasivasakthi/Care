@@ -63,7 +63,12 @@ export function ErrorBox({ message }) {
 }
 
 export function Spinner({ label = "Loading…" }) {
-  return <div className="rounded-xl border border-slate-200 bg-white text-sm text-slate-500 animate-pulse py-10 text-center">{label}</div>;
+  return (
+    <div className="care-loading-state" role="status" aria-live="polite">
+      <span className="care-loading-spinner" aria-hidden="true" />
+      <span>{label}</span>
+    </div>
+  );
 }
 
 
@@ -103,14 +108,15 @@ export function RiskBar({ value, label = "Readmission risk" }) {
 }
 
 export function EmptyState({ title, description }) {
-  return <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-9 text-center">
+  return <div role="status" className="care-empty-state">
+    <span className="care-empty-state-mark" aria-hidden="true">—</span>
     <div className="text-sm font-semibold text-slate-800">{title}</div>
-    {description && <p className="mx-auto mt-1 max-w-md text-sm text-slate-500">{description}</p>}
+    {description && <p className="mx-auto mt-1 max-w-md text-sm text-slate-600">{description}</p>}
   </div>;
 }
 
 export function Skeleton({ lines = 3 }) {
-  return <div aria-label="Loading" className="animate-pulse space-y-3 rounded-xl border border-slate-200 bg-white p-5">
-    {Array.from({ length: lines }, (_, i) => <div key={i} className={`h-3 rounded bg-slate-100 ${i === 0 ? "w-1/3" : i === lines - 1 ? "w-2/3" : "w-full"}`} />)}
+  return <div aria-label="Loading content" aria-busy="true" role="status" className="care-skeleton">
+    {Array.from({ length: lines }, (_, i) => <div key={i} className={`care-skeleton-line ${i === 0 ? "short" : i === lines - 1 ? "medium" : "full"}`} />)}
   </div>;
 }
