@@ -24,12 +24,12 @@ function TaskTimeline({ tasks, demoDate, onPatch }) {
 
 
 function HandoutPaper({ patientNbr, demoDate, content, language }) {
-  const rawLines = String(content?.text || "").split(/\\r?\\n/).map((line) => line.replace(/^\\s*[-•]\\s*/, "").trim()).filter(Boolean);
+  const rawLines = String(content?.text || "").split(/\r?\n/).map((line) => line.replace(/^\s*[-•]\s*/, "").trim()).filter(Boolean);
   let heading = "After your hospital stay";
   if (rawLines.length && rawLines[0].length < 65 && !/[.!?।]$/.test(rawLines[0])) heading = rawLines.shift();
   let lines = rawLines;
   if (lines.length === 1) {
-    const split = lines[0].split(/(?<=[.!?।])\\s+/).filter(Boolean);
+    const split = lines[0].split(/(?<=[.!?।])\s+/).filter(Boolean);
     if (split.length > 1) lines = split;
   }
   const helpIndex = lines.findIndex((line) => /emergency|much worse|worse|urgent|आपातकाल|बिगड़|அவசர|மோசமட|आपत्कालीन|बिघड/i.test(line));
