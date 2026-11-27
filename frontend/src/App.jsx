@@ -46,7 +46,7 @@ export default function App() {
           <div className="brand-mark">CT</div>
           <div>
             <div className="brand-name">CareTrace</div>
-            <div className="brand-caption">Care, coordinated.</div>
+            <div className="brand-caption">who to call first after discharge</div>
           </div>
         </div>
 
