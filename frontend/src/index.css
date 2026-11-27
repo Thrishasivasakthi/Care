@@ -84,7 +84,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .role-switch button:hover { color: var(--navy); background: #E9EDF2; }
 .role-switch button.selected { color: #FFFFFF; background: var(--teal); box-shadow: 0 1px 3px rgba(15,118,110,.2); }
 
-.page-content { width: 100%; max-width: 1344px; margin: 0 auto; padding: 34px 32px 40px; flex: 1; }
+.page-content { width: 100%; max-width: 1280px; margin: 0 auto; padding: 34px 32px 40px; flex: 1; }
 .page-intro { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin: 0 0 26px; }
 .page-intro h1 { margin: 0; color: var(--text); font-size: 36px; line-height: 1.12; letter-spacing: -.045em; font-weight: 600; }
 .page-intro p { margin: 8px 0 0; color: var(--muted); font-size: 14px; line-height: 1.55; max-width: 760px; }
