@@ -189,12 +189,15 @@ def render_discharge_instructions(
 
     filled, missing = fill(text, slots)
     verified = not missing and "{" not in filled
+    slots_used = {k: v for k, v in slots.items() if v is not None}
     return {
         "text": filled,
         "source": source,
         "verified": verified,
         "missing_slots": missing,
-        "slots_used": {k: v for k, v in slots.items() if v is not None},
+        "slots_used": slots_used,
+        "slots_filled": len(slots_used),
+        "slots_total": len(ALLOWED_SLOTS),
         "llm_configured": llm_configured(),
         "note": (
             "Written by the LLM from slots only; every value filled from the "
@@ -219,6 +222,7 @@ def render_regional_instructions(
     text = reg.regional_template(lang)
     filled, missing = fill(text, slots)
     verified = not missing and "{" not in filled
+    slots_used = {k: v for k, v in slots.items() if v is not None}
     bt_raw = reg.BACK_TRANSLATION.get(lang, "")
     bt_filled, _ = fill(bt_raw, slots)
     return {
@@ -226,7 +230,9 @@ def render_regional_instructions(
         "source": "regional-template",
         "verified": verified,
         "missing_slots": missing,
-        "slots_used": {k: v for k, v in slots.items() if v is not None},
+        "slots_used": slots_used,
+        "slots_filled": len(slots_used),
+        "slots_total": len(ALLOWED_SLOTS),
         "language": lang,
         "back_translation": bt_filled,
         "needs_native_review": reg.needs_review(),

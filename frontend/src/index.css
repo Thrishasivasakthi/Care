@@ -725,3 +725,14 @@ button:disabled { transform:none !important; }
 @media(max-width:1100px) { .demo-start-button { font-size:11px; padding:0 9px; } }
 @media(max-width:760px) { .topbar-actions { flex-wrap:wrap; } .demo-start-button { min-height:34px; } .demo-caption-bar { align-items:stretch; flex-direction:column; gap:12px; bottom:10px; padding:13px; } .demo-caption-controls { justify-content:space-between; } .demo-caption-controls button { padding:0 10px; } }
 @media(prefers-reduced-motion:reduce) { .demo-highlight { animation:none !important; } .demo-start-button { transition:none !important; } }
+
+
+/* Step 8 — discharge wording provenance and safety disclosure */
+.discharge-provenance-row { display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.discharge-provenance-pill { display:inline-flex; align-items:center; min-height:27px; padding:0 10px; border:1px solid #D8E3EA; border-radius:999px; background:#F1F5F9; color:#334155; font-size:11px; font-weight:800; }
+.discharge-provenance-pill.llm { border-color:#B9DDD5; background:#EAF7F3; color:#075E55; }
+.discharge-provenance-pill.template { border-color:#D8E3EA; background:#F1F5F9; color:#334155; }
+.discharge-safety-details { margin-top:10px; padding:12px 14px; border:1px solid #DCE9ED; border-radius:13px; background:#FBFDFE; color:#334155; }
+.discharge-safety-details summary { cursor:pointer; color:#0B2545; font-size:12px; font-weight:800; }
+.discharge-safety-details ol { display:grid; gap:7px; margin:10px 0 8px; padding-left:20px; color:#334155; font-size:12px; line-height:1.55; }
+.discharge-safety-details p { margin:8px 0 0; color:#475569; font-size:11px; line-height:1.55; }

@@ -35,7 +35,8 @@ function HandoutPaper({ patientNbr, demoDate, content, language }) {
   const helpIndex = lines.findIndex((line) => /emergency|much worse|worse|urgent|आपातकाल|बिगड़|அவசர|மோசமட|आपत्कालीन|बिघड/i.test(line));
   const helpText = helpIndex >= 0 ? lines[helpIndex] : null;
   const steps = lines.filter((_, index) => index !== helpIndex);
-  const filled = Object.keys(content?.slots_used || {}).length;
+  const filled = Number(content?.slots_filled ?? Object.keys(content?.slots_used || {}).length);
+  const totalSlots = Number(content?.slots_total ?? 3);
   return (
     <div className="discharge-printable" lang={language || "en"}>
       <header className="discharge-paper-header">
@@ -54,7 +55,7 @@ function HandoutPaper({ patientNbr, demoDate, content, language }) {
         {steps.map((line, index) => <li key={index}><span>{index + 1}</span><p>{line}</p></li>)}
       </ol>
       {helpText && <aside className="discharge-paper-help"><strong>When to get help</strong><p>{helpText}</p></aside>}
-      <div className="discharge-paper-verification">{filled} of 3 record slots filled · {content?.verified ? "No unfilled placeholders remain." : "Some record values could not be filled."}</div>
+      <div className="discharge-paper-verification">{filled} of {totalSlots} record slots filled · {content?.verified ? "No unfilled placeholders remain." : "Some record values could not be filled."}</div>
       <footer className="discharge-paper-footer">Decision support, reviewed by your care team.</footer>
     </div>
   );
@@ -152,7 +153,24 @@ function HandoutPaper({ patientNbr, demoDate, content, language }) {
           <div data-demo-target="discharge-handout"><Card title="Discharge handout" className="demo-discharge-card" right={<button type="button" className="discharge-print-button" onClick={() => window.print()}>Print or save as PDF</button>}>
             <div className="discharge-handout-head"><div><div className="discharge-section-eyebrow">AFTER YOUR HOSPITAL STAY</div><h2>Care instructions</h2><p>Review the information below with the patient before discharge.</p></div><span className={"discharge-verified-pill " + (ins.verified ? "verified" : "unverified")}>{ins.verified ? "✓ Record-verified slots" : "⚠ Verification needed"}</span></div>
             <HandoutPaper patientNbr={d.patient_nbr} demoDate={d.demo_date} content={ins} language="en" />
-            <div className="discharge-source-note"><span>ⓘ</span><div><b>{ins.source === "llm" ? "LLM phrasing · record-filled slots" : "Fixed template · no LLM key"}</b><p>The LLM only phrases placeholder text. Code fills {Object.keys(ins.slots_used).join(", ") || "—"} from the patient record; it does not write drug names, dates, doses or numbers. {ins.note}</p></div></div>
+            <div className="discharge-provenance-row">
+              <span className={"discharge-provenance-pill " + (ins.source === "llm" && ins.llm_configured ? "llm" : "template")}>
+                {ins.source === "llm" && ins.llm_configured ? "Wording: LLM-phrased, code-filled" : "Wording: fixed template (LLM optional)"}
+              </span>
+              <span className={"discharge-verified-pill " + (ins.verified ? "verified" : "unverified")}>
+                {Number(ins.slots_filled ?? Object.keys(ins.slots_used || {}).length)} of {Number(ins.slots_total ?? 3)} slots filled from record
+              </span>
+            </div>
+            <div className="discharge-source-note"><span>ⓘ</span><div><b>{ins.source === "llm" && ins.llm_configured ? "LLM phrasing · record-filled slots" : "Fixed-template wording · record-filled slots"}</b><p>Code fills {Object.keys(ins.slots_used || {}).join(", ") || "no available slots"} from the patient record. The LLM does not supply drug names, dates, doses or numbers. {ins.note}</p></div></div>
+            <details className="discharge-safety-details">
+              <summary>How we keep this safe</summary>
+              <ol>
+                <li>The LLM writes wording only. It may use the approved placeholders; it does not supply clinical values.</li>
+                <li>Code fills available drug, follow-up date and intervention values from the patient record.</li>
+                <li>If the LLM fails or its output contains invalid or incomplete content, the renderer rejects it and uses the fixed template.</li>
+              </ol>
+              <p>{Number(ins.slots_filled ?? Object.keys(ins.slots_used || {}).length)} of {Number(ins.slots_total ?? 3)} defined slots have values from the record. {ins.verified ? "No unfilled placeholders remain in the generated handout." : "Review the unfilled placeholders before using this handout."}</p>
+            </details>
             <div className="discharge-language-row"><div><b>Language</b><small>Choose a patient-facing language</small></div><div className="discharge-language-tabs">{LANGUAGES.map((lang) => <button type="button" key={lang.value} className={regionalLang === lang.value ? "active" : ""} onClick={() => setRegionalLang(lang.value)}>{lang.label}</button>)}</div>
               {regional && <span className={"discharge-verified-pill " + (regional.verified ? "verified" : "unverified")}>{regional.verified ? "✓ Verified" : "⚠ Unverified"}</span>}</div>
             {regional && <><HandoutPaper patientNbr={d.patient_nbr} demoDate={d.demo_date} content={regional} language={regionalLang} />{regional.needs_native_review && <div className="discharge-review-note">Regional text needs native-speaker review before clinical use.</div>}
