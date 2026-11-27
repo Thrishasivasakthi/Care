@@ -215,7 +215,7 @@ export default function Ops() {
     </div>
 
     <div className="ops-main-grid" style={{ gridTemplateColumns: "minmax(0, 1fr)" }}>
-      <Card title={`Replay backtest · ${replay ? `${replay.days} simulated days` : "not generated"}`} right={<span className="ops-dataset-note">{replay ? `${replay.cohort_size} patients · ${replay.budget_hours} h budget` : "Replay artifact"}</span>}>
+      <div data-demo-target="ops-replay"><Card title={`Replay backtest · ${replay ? `${replay.days} simulated days` : "not generated"}`} right={<span className="ops-dataset-note">{replay ? `${replay.cohort_size} patients · ${replay.budget_hours} h budget` : "Replay artifact"}</span>}>
         {!replay ? <p className="ops-empty">Generate the replay artifact to display the historical strategy comparison.</p> : <>
           {replay.warning && <div className="ops-warning">{replay.warning}</div>}
           <div className="ops-winner-pill">{reachedLead && avoidedLead ? "✓ CareTrace leads on both metrics" : "Replay comparison · see both metrics"}</div>
