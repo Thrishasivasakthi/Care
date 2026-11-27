@@ -12,6 +12,19 @@ phrases discharge text, and a clinician who approves every flag.
 
 ---
 
+## Prerequisites
+
+- **Python 3.11+** (tested on 3.12.10)
+- **Node.js 18+** with npm (for the React UI)
+- **GNU Make** (Windows: install GnuWin32 Make; on a fresh PowerShell refresh PATH:
+  `$env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')`)
+- **The dataset file** `data/diabetic_data.csv` (UCI Diabetes 130-US Hospitals, 101,766 rows).
+  This repo does not ship it; place it at `<repo>/data/diabetic_data.csv` before
+  running `make train`. Do not substitute another file (the code assumes these
+  columns).
+- Optional: `ANTHROPIC_API_KEY` to enable the LLM discharge-text path. The app
+  runs fully offline without it (fixed-template fallback).
+
 ## Quick start (clean machine, one command each)
 
 ```bash
@@ -25,7 +38,7 @@ Optional:
 
 ```bash
 make replay   # 200-day offline backtest -> artifacts/replay.json
-make test     # 16 tests (split integrity, no-leak, budget, 403, fallback)
+make test     # 20 tests (split integrity, no-leak, budget, 403, fallback, ...)
 make ui       # frontend production build
 ```
 

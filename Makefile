@@ -2,10 +2,11 @@
 # with python/npm if `make` is unavailable (see README).
 PY ?= python
 
-.PHONY: setup train seed run ui test
+.PHONY: setup train seed run ui test replay reset
 
 setup:
 	$(PY) -m pip install -r requirements.txt
+	cd frontend && npm install
 
 train:
 	$(PY) -m backend.ml.train
@@ -19,5 +20,8 @@ run:
 ui:
 	cd frontend && npm run dev
 
-test:
-	$(PY) -m pytest -q
+replay:
+	$(PY) -m backend.decision.replay
+
+reset:
+	curl -X POST http://127.0.0.1:8000/demo/reset
